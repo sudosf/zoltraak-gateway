@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: "Zoltraak Gateway"
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
+  shutdown: graceful
+
+zoltraak:
+  provider:
+    active: vastai
+    vastai:
+      api-key: todo
+      instance-id: todo
+      base-url: https://console.vast.ai
+    runpod:
+      api-key: todo
+      pod-id: todo
+      base-url: https://rest.runpod.io/v1
+
+  ollama:
+    gpu-pod:
+      model-vision: llava:13b
+    local:
+      url: http://localhost:11434
+      timeout-seconds: 15
+
+  gpu:
+    idle-timeout-minutes: 15
+    warmup-timeout-seconds: 180
+    warmup-poll-interval-seconds: 5
+
+  queue:
+    max-wait-seconds: 180
+    expiry-check-interval-seconds: 10
+
+logging:
+  level:
+    com.zoltraak: DEBUG
+    reactor.netty: WARN
