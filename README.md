@@ -1,6 +1,6 @@
 # Zoltraak Gateway
 
-Control plane for self-hosted model workloads. Manages GPU cloud instances on demand, proxies requests to Ollama and ComfyUI, and exposes a unified REST API for creative and coding features.
+Control plane for self-hosted LLM workloads. Manages GPU cloud instances on demand, proxies requests to Ollama and ComfyUI, and exposes a unified REST API for creative and coding features.
 
 ## Prerequisites
 
@@ -11,50 +11,7 @@ Control plane for self-hosted model workloads. Manages GPU cloud instances on de
 
 ## Getting Started
 
-Clone the repository:
-
-```bash
-git clone https://github.com/sudosf/zoltraak-gateway.git
-cd zoltraak-gateway
-```
-
-Copy the environment variable template and fill in your values:
-
-```bash
-cp .env.example .env
-```
-
-Run in development mode:
-
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-## Environment Variables
-
-| Variable | Description |
-|---|---|
-| ZOLTRAAK_JWT_SECRET | JWT signing secret, minimum 256 bits |
-| RUNPOD_API_KEY | RunPod API key from settings |
-| RUNPOD_POD_ID | Pod ID from RunPod dashboard |
-| VASTAI_API_KEY | Vast.ai API key |
-| VASTAI_INSTANCE_ID | Instance ID from Vast.ai console |
-| TELEGRAM_BOT_TOKEN | Token from BotFather |
-| TELEGRAM_SECRET_TOKEN | Secret for validating Telegram webhook calls |
-| TELEGRAM_WEBHOOK_URL | Public HTTPS URL Telegram delivers webhooks to |
-
-## Running Tests
-
-```bash
-./mvnw test
-```
-
-## Building for Production
-
-```bash
-./mvnw clean package -DskipTests
-java -jar target/gateway-0.0.1-SNAPSHOT.jar
-```
+TODO
 
 ## Documentation
 
