@@ -1,12 +1,14 @@
 package com.zoltraak.gateway.config.properties;
 
+import com.zoltraak.gateway.domain.enums.GpuProvider;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "zoltraak.provider")
 @Data
 public class ProviderProperties {
-    private String active;
+    private GpuProvider active;
+    private Integer timeoutSeconds;
     private RunPodConfig runPod;
     private VastAiConfig vastAi;
 

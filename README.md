@@ -2,6 +2,9 @@
 
 Control plane for self-hosted LLM workloads. Manages GPU cloud instances on demand, proxies requests to Ollama and ComfyUI, and exposes a unified REST API for creative and coding features.
 
+For backlog items and progress on issues and new features, please see
+the [Project Board](https://github.com/users/sudosf/projects/2)
+
 ## Prerequisites
 
 - Java 25

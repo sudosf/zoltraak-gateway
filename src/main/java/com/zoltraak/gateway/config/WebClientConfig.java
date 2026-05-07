@@ -1,6 +1,7 @@
 package com.zoltraak.gateway.config;
 
 import com.zoltraak.gateway.config.properties.ProviderProperties;
+import com.zoltraak.gateway.domain.enums.GpuProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -14,13 +15,12 @@ public class WebClientConfig {
 
     @Bean
     public WebClient providerWebClient(ProviderProperties providerProperties) {
-        // TODO revisit hard-coded timeout (magic number)
-        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(30));
-        String baseUrl = providerProperties.getActive().equals("vastai")
-                ? providerProperties.getRunPod().getBaseUrl()
-                : providerProperties.getVastAi().getBaseUrl();
+        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(providerProperties.getTimeoutSeconds()));
 
-        // TODO revisit creating raw instance of client connector
+        String baseUrl = providerProperties.getActive() == GpuProvider.VASTAI
+                ? providerProperties.getVastAi().getBaseUrl()
+                : providerProperties.getRunPod().getBaseUrl();
+
         return WebClient.builder()
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(baseUrl)

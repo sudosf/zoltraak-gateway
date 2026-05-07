@@ -13,11 +13,13 @@ public class OllamaProperties {
     @Data
     public static class GpuPodConfig {
         private String modelVision;
+        private Integer port;
     }
 
     @Data
     public static class LocalConfig {
         private String url;
-        private String timeoutSeconds;
+        private Integer port;
+        private Integer timeoutSeconds;
     }
 }
