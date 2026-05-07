@@ -1,6 +1,7 @@
 package com.zoltraak.gateway.config;
 
 import com.zoltraak.gateway.config.properties.ProviderProperties;
+import com.zoltraak.gateway.domain.enums.GpuProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;

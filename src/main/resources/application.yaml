@@ -24,8 +24,10 @@ zoltraak:
   ollama:
     gpu-pod:
       model-vision: llava:13b # TODO revisit model
+      port: 11434
     local:
-      url: http://localhost:11434
+      url: http://localhost
+      port: 11434
       timeout-seconds: 15
 
   gpu:
