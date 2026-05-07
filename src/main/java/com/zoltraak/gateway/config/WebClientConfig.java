@@ -14,13 +14,12 @@ public class WebClientConfig {
 
     @Bean
     public WebClient providerWebClient(ProviderProperties providerProperties) {
-        // TODO revisit hard-coded timeout (magic number)
-        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(30));
-        String baseUrl = providerProperties.getActive().equals("vastai")
-                ? providerProperties.getRunPod().getBaseUrl()
-                : providerProperties.getVastAi().getBaseUrl();
+        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(providerProperties.getTimeoutSeconds()));
 
-        // TODO revisit creating raw instance of client connector
+        String baseUrl = providerProperties.getActive() == GpuProvider.VASTAI
+                ? providerProperties.getVastAi().getBaseUrl()
+                : providerProperties.getRunPod().getBaseUrl();
+
         return WebClient.builder()
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .baseUrl(baseUrl)
