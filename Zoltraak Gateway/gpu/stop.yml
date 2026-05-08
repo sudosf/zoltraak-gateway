@@ -1,0 +1,18 @@
+info:
+  name: stop
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{localhost}}/api/v1/gpu/stop"
+  auth:
+    type: basic
+    username: user
+    password: 00127850-e9d6-4ec9-8e39-d7c59b1ff32f
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
