@@ -1,7 +1,0 @@
-info:
-  name: vast-ai
-  type: folder
-  seq: 1
-
-request:
-  auth: inherit
