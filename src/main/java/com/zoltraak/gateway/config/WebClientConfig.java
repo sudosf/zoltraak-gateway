@@ -15,20 +15,31 @@ public class WebClientConfig {
 
     @Bean
     public WebClient providerWebClient(ProviderProperties providerProperties) {
-        HttpClient httpClient = HttpClient.create().responseTimeout(Duration.ofSeconds(providerProperties.getTimeoutSeconds()));
-
-        String baseUrl = providerProperties.getActive() == GpuProvider.VASTAI
-                ? providerProperties.getVastAi().getBaseUrl()
-                : providerProperties.getRunPod().getBaseUrl();
+        HttpClient httpClient = HttpClient.create()
+                .followRedirect(true)
+                .responseTimeout(Duration.ofSeconds(providerProperties.getTimeoutSeconds()));
 
         return WebClient.builder()
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl(baseUrl)
+                .baseUrl(activeBaseUrl(providerProperties))
+                .defaultHeader("Authorization", "Bearer %s".formatted(activeApiKey(providerProperties)))
                 .build();
     }
 
     @Bean
     public WebClient ollamaWebClient() {
         return WebClient.builder().build();
+    }
+
+    private String activeBaseUrl(ProviderProperties providerProperties) {
+        return providerProperties.getActive() == GpuProvider.VASTAI
+                ? providerProperties.getVastAi().getBaseUrl()
+                : providerProperties.getRunPod().getBaseUrl();
+    }
+
+    private String activeApiKey(ProviderProperties providerProperties) {
+        return providerProperties.getActive() == GpuProvider.VASTAI
+                ? providerProperties.getVastAi().getApiKey()
+                : providerProperties.getRunPod().getApiKey();
     }
 }

@@ -2,13 +2,14 @@ package com.zoltraak.gateway.adapters.gpu;
 
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.shared.PodConnectionDetails;
+import reactor.core.publisher.Mono;
 
 public interface GpuProviderPort {
-    void start();
+    Mono<Void> start();
 
-    void stop();
+    Mono<Void> stop();
 
-    PodStatus getStatus();
+    Mono<PodStatus> getStatus();
 
-    PodConnectionDetails getConnectionDetails();
+    Mono<PodConnectionDetails> getConnectionDetails();
 }
