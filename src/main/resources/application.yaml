@@ -13,8 +13,8 @@ zoltraak:
     active: vastai
     timeout-seconds: 30
     vastai:
-      api-key: todo
-      instance-id: todo
+      api-key: ${VAST_AI_API_KEY}
+      instance-id: ${VAST_AI_INSTANCE_ID}
       base-url: https://console.vast.ai
     runpod:
       api-key: todo
