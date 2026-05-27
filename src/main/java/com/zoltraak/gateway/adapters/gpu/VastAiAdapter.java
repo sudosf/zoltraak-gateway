@@ -7,7 +7,7 @@ import com.zoltraak.gateway.config.properties.OllamaProperties;
 import com.zoltraak.gateway.config.properties.ProviderProperties;
 import com.zoltraak.gateway.domain.enums.GpuProvider;
 import com.zoltraak.gateway.domain.enums.PodStatus;
-import com.zoltraak.gateway.domain.shared.PodConnectionDetails;
+import com.zoltraak.gateway.domain.models.provider.PodConnectionDetails;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -24,7 +24,9 @@ public class VastAiAdapter implements GpuProviderPort {
     private final OllamaProperties ollamaProperties;
     private final String instanceUri;
 
-    public VastAiAdapter(ProviderProperties providerProperties, @Qualifier("providerWebClient") WebClient webClient, OllamaProperties ollamaProperties) {
+    public VastAiAdapter(ProviderProperties providerProperties,
+                         @Qualifier("providerWebClient") WebClient webClient,
+                         OllamaProperties ollamaProperties) {
         this.webClient = webClient;
         this.ollamaProperties = ollamaProperties;
         this.instanceUri = "/api/v0/instances/%s".formatted(providerProperties.getVastAi().getInstanceId());

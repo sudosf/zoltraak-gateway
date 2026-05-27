@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.domain.shared;
+package com.zoltraak.gateway.domain.exception;
 
 import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
 import lombok.Getter;

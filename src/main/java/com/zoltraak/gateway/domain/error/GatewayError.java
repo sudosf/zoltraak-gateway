@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.domain.shared;
+package com.zoltraak.gateway.domain.error;
 
 import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
 

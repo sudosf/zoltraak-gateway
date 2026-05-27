@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.adapters.ollama.model;
+package com.zoltraak.gateway.domain.models.ollama;
 
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
@@ -9,6 +9,7 @@ public record OllamaModel(
         String model,
         String modifiedAt,
         Long size,
-        String digest
+        String digest,
+        OllamaModelDetails details
 ) {
 }

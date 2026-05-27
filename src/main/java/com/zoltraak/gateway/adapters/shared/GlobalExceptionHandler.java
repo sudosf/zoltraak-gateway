@@ -2,8 +2,8 @@ package com.zoltraak.gateway.adapters.shared;
 
 import com.zoltraak.gateway.adapters.gpu.ProviderException;
 import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
-import com.zoltraak.gateway.domain.shared.GatewayResponse;
-import com.zoltraak.gateway.domain.shared.GatewayServiceException;
+import com.zoltraak.gateway.domain.exception.GatewayServiceException;
+import com.zoltraak.gateway.domain.response.GatewayResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

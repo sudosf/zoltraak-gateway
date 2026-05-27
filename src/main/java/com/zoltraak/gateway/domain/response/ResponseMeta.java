@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.domain.shared;
+package com.zoltraak.gateway.domain.response;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

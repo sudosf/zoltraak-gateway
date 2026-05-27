@@ -1,14 +1,13 @@
-package com.zoltraak.gateway.adapters.ollama.model;
+package com.zoltraak.gateway.domain.models.ollama;
 
 import tools.jackson.databind.PropertyNamingStrategies;
 import tools.jackson.databind.annotation.JsonNaming;
 
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public record OllamaGenerateResponse(
+public record OllamaChatResponse(
         String model,
         String createdAt,
-        String response,
-        String thinking,
+        OllamaMessage message,
         boolean done,
         String doneReason
 ) {

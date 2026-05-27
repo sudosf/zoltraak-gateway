@@ -1,6 +1,7 @@
-package com.zoltraak.gateway.domain.shared;
+package com.zoltraak.gateway.domain.response;
 
 import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
+import com.zoltraak.gateway.domain.error.GatewayError;
 
 public record GatewayResponse<T>(
         T data,

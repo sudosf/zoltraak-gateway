@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.domain.shared;
+package com.zoltraak.gateway.domain.exception;
 
 public class ZoltraakGatewayException extends RuntimeException {
 
