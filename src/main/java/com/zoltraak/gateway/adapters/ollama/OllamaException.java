@@ -1,6 +1,6 @@
 package com.zoltraak.gateway.adapters.ollama;
 
-import com.zoltraak.gateway.domain.shared.ZoltraakGatewayException;
+import com.zoltraak.gateway.domain.exception.ZoltraakGatewayException;
 import lombok.Getter;
 
 @Getter

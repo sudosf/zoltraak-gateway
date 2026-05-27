@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.adapters.ollama.model;
+package com.zoltraak.gateway.domain.models.ollama;
 
 import java.util.List;
 

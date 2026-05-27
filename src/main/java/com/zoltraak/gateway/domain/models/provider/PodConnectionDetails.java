@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.domain.shared;
+package com.zoltraak.gateway.domain.models.provider;
 
 public record PodConnectionDetails(
         String ollamaUrl,

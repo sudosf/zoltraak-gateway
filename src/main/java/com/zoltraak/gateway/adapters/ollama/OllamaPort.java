@@ -1,6 +1,6 @@
 package com.zoltraak.gateway.adapters.ollama;
 
-import com.zoltraak.gateway.adapters.ollama.model.*;
+import com.zoltraak.gateway.domain.models.ollama.*;
 import reactor.core.publisher.Mono;
 
 public interface OllamaPort {

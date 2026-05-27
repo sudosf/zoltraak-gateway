@@ -5,7 +5,7 @@ spring:
     default-property-inclusion: non_null
 
 server:
-  port: 8080
+  port: 8081
   shutdown: graceful
 
 zoltraak:
@@ -24,7 +24,7 @@ zoltraak:
   ollama:
     gpu-pod:
       model-vision: llava:13b # TODO revisit model
-      port: 11434
+      port: 33140
     local:
       url: http://localhost
       port: 11434

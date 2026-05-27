@@ -19,10 +19,13 @@ public class WebClientConfig {
                 .followRedirect(true)
                 .responseTimeout(Duration.ofSeconds(providerProperties.getTimeoutSeconds()));
 
+        String baseUrl = activeBaseUrl(providerProperties);
+        String apiKey = activeApiKey(providerProperties);
+
         return WebClient.builder()
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl(activeBaseUrl(providerProperties))
-                .defaultHeader("Authorization", "Bearer %s".formatted(activeApiKey(providerProperties)))
+                .baseUrl(baseUrl)
+                .defaultHeader("Authorization", "Bearer %s".formatted(apiKey))
                 .build();
     }
 

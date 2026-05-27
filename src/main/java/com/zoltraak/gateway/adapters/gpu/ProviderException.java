@@ -1,7 +1,7 @@
 package com.zoltraak.gateway.adapters.gpu;
 
 import com.zoltraak.gateway.domain.enums.GpuProvider;
-import com.zoltraak.gateway.domain.shared.ZoltraakGatewayException;
+import com.zoltraak.gateway.domain.exception.ZoltraakGatewayException;
 import lombok.Getter;
 
 @Getter
