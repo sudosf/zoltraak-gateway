@@ -1,7 +1,8 @@
 package com.zoltraak.gateway.features.proxy;
 
 import com.zoltraak.gateway.adapters.ollama.OllamaPort;
-import com.zoltraak.gateway.domain.models.ollama.OllamaTagsResponse;
+import com.zoltraak.gateway.domain.models.ollama.OllamaModelsResponse;
+import com.zoltraak.gateway.domain.models.ollama.OllamaVersionResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,8 +20,17 @@ public class OllamaProxyController {
     }
 
     @GetMapping("/tags")
-    public Mono<ResponseEntity<OllamaTagsResponse>> getTags() {
-        return ollamaPort.getTags()
-                .map(ResponseEntity::ok);
+    public Mono<ResponseEntity<OllamaModelsResponse>> getTags() {
+        return ollamaPort.getTags().map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/version")
+    public Mono<ResponseEntity<OllamaVersionResponse>> getVersion() {
+        return ollamaPort.getVersion().map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/ps")
+    public Mono<ResponseEntity<OllamaModelsResponse>> getPs() {
+        return ollamaPort.getPs().map(ResponseEntity::ok);
     }
 }

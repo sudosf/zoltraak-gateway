@@ -8,7 +8,11 @@ public interface OllamaPort {
 
     Mono<OllamaChatResponse> chat(OllamaChatRequest request);
 
-    Mono<OllamaTagsResponse> getTags();
+    Mono<OllamaModelsResponse> getTags();
+
+    Mono<OllamaModelsResponse> getPs();
+
+    Mono<OllamaVersionResponse> getVersion();
 
     Mono<Boolean> isHealthy();
 }

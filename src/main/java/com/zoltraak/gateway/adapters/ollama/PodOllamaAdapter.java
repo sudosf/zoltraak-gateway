@@ -30,14 +30,38 @@ public class PodOllamaAdapter implements OllamaPort {
     }
 
     @Override
-    public Mono<OllamaTagsResponse> getTags() {
+    public Mono<OllamaModelsResponse> getTags() {
         return gpuProviderPort
                 .getConnectionDetails()
                 .flatMap(connDetails ->
                         webClient.get()
                                 .uri(connDetails.ollamaUrl() + "/api/tags")
                                 .retrieve()
-                                .bodyToMono(OllamaTagsResponse.class)
+                                .bodyToMono(OllamaModelsResponse.class)
+                );
+    }
+
+    @Override
+    public Mono<OllamaModelsResponse> getPs() {
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMap(connDetails ->
+                        webClient.get()
+                                .uri(connDetails.ollamaUrl() + "/api/ps")
+                                .retrieve()
+                                .bodyToMono(OllamaModelsResponse.class)
+                );
+    }
+
+    @Override
+    public Mono<OllamaVersionResponse> getVersion() {
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMap(connDetails ->
+                        webClient.get()
+                                .uri(connDetails.ollamaUrl() + "/api/version")
+                                .retrieve()
+                                .bodyToMono(OllamaVersionResponse.class)
                 );
     }
 
