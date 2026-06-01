@@ -24,8 +24,10 @@ done
 echo "Ollama is up"
 
 echo "=== Pulling vision model ==="
-ollama pull huihui_ai/qwen3.5-abliterated:9b
+ollama pull huihui_ai/qwen3.5-abliterated:4b
+ollama pull huihui_ai/qwen3-vl-abliterated:4b
+ollama pull Tohur/natsumura-storytelling-rp-llama-3.1
+ollama pull Tohur/natsumura-code-llama-3.1
 
 echo "=== Done ==="
 echo "Ollama log: tail -f ollama.log"
-echo "Test: ollama run huihui_ai/qwen3.5-abliterated:9b"
