@@ -9,6 +9,12 @@ public record OllamaChatResponse(
         String createdAt,
         OllamaMessage message,
         boolean done,
-        String doneReason
+        String doneReason,
+        Long totalDuration,
+        Long loadDuration,
+        Integer promptEvalCount,
+        Long promptEvalDuration,
+        Integer evalCount,
+        Long evalDuration
 ) {
 }

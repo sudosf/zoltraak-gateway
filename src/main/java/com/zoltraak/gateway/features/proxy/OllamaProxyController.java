@@ -1,12 +1,13 @@
 package com.zoltraak.gateway.features.proxy;
 
 import com.zoltraak.gateway.adapters.ollama.OllamaPort;
+import com.zoltraak.gateway.domain.models.ollama.OllamaChatRequest;
+import com.zoltraak.gateway.domain.models.ollama.OllamaChatResponse;
 import com.zoltraak.gateway.domain.models.ollama.OllamaModelsResponse;
 import com.zoltraak.gateway.domain.models.ollama.OllamaVersionResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -17,6 +18,11 @@ public class OllamaProxyController {
 
     public OllamaProxyController(OllamaPort ollamaPort) {
         this.ollamaPort = ollamaPort;
+    }
+
+    @PostMapping(value = "/chat", produces = "application/x-ndjson")
+    public Flux<OllamaChatResponse> chat(@RequestBody OllamaChatRequest request) {
+        return ollamaPort.chat(request);
     }
 
     @GetMapping("/tags")
