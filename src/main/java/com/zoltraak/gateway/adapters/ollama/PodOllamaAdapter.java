@@ -22,7 +22,15 @@ public class PodOllamaAdapter implements OllamaPort {
 
     @Override
     public Flux<OllamaGenerateResponse> generate(OllamaGenerateRequest request) {
-        return null;
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMapMany(connDetails ->
+                        webClient.post()
+                                .uri(connDetails.ollamaUrl() + "/api/generate")
+                                .bodyValue(request)
+                                .retrieve()
+                                .bodyToFlux(OllamaGenerateResponse.class)
+                );
     }
 
     @Override
