@@ -58,10 +58,11 @@ public class VastAiAdapter implements GpuProviderPort {
     @Override
     public Mono<PodConnectionDetails> getConnectionDetails() {
         return fetchInstance()
+                .mapNotNull(VastAiInstanceWrapper::instances)
                 .switchIfEmpty(Mono.error(new ProviderException(
                         GpuProvider.VASTAI, 500, "Empty response from Vast.ai")))
-                .map(wrapper -> {
-                    String ipAddress = wrapper.instances().publicIpaddr();
+                .map(instance -> {
+                    String ipAddress = instance.publicIpaddr();
                     String ollamaUrl = "http://%s:%d".formatted(ipAddress, ollamaProperties.getGpuPod().getPort());
                     return new PodConnectionDetails(ollamaUrl, null);
                 });

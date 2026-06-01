@@ -1,14 +1,19 @@
 package com.zoltraak.gateway.adapters.ollama;
 
 import com.zoltraak.gateway.domain.models.ollama.*;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface OllamaPort {
-    Mono<OllamaGenerateResponse> generate(OllamaGenerateRequest request);
+    Flux<OllamaGenerateResponse> generate(OllamaGenerateRequest request);
 
-    Mono<OllamaChatResponse> chat(OllamaChatRequest request);
+    Flux<OllamaChatResponse> chat(OllamaChatRequest request);
 
-    Mono<OllamaTagsResponse> getTags();
+    Mono<OllamaModelsResponse> getTags();
+
+    Mono<OllamaModelsResponse> getPs();
+
+    Mono<OllamaVersionResponse> getVersion();
 
     Mono<Boolean> isHealthy();
 }

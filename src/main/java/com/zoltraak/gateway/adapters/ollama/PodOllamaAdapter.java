@@ -6,6 +6,7 @@ import com.zoltraak.gateway.domain.models.ollama.*;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Adapter
@@ -20,24 +21,56 @@ public class PodOllamaAdapter implements OllamaPort {
     }
 
     @Override
-    public Mono<OllamaGenerateResponse> generate(OllamaGenerateRequest request) {
+    public Flux<OllamaGenerateResponse> generate(OllamaGenerateRequest request) {
         return null;
     }
 
     @Override
-    public Mono<OllamaChatResponse> chat(OllamaChatRequest request) {
-        return null;
+    public Flux<OllamaChatResponse> chat(OllamaChatRequest request) {
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMapMany(connDetails ->
+                        webClient.post()
+                                .uri(connDetails.ollamaUrl() + "/api/chat")
+                                .bodyValue(request)
+                                .retrieve()
+                                .bodyToFlux(OllamaChatResponse.class)
+                );
     }
 
     @Override
-    public Mono<OllamaTagsResponse> getTags() {
+    public Mono<OllamaModelsResponse> getTags() {
         return gpuProviderPort
                 .getConnectionDetails()
                 .flatMap(connDetails ->
                         webClient.get()
                                 .uri(connDetails.ollamaUrl() + "/api/tags")
                                 .retrieve()
-                                .bodyToMono(OllamaTagsResponse.class)
+                                .bodyToMono(OllamaModelsResponse.class)
+                );
+    }
+
+    @Override
+    public Mono<OllamaModelsResponse> getPs() {
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMap(connDetails ->
+                        webClient.get()
+                                .uri(connDetails.ollamaUrl() + "/api/ps")
+                                .retrieve()
+                                .bodyToMono(OllamaModelsResponse.class)
+                );
+    }
+
+    @Override
+    public Mono<OllamaVersionResponse> getVersion() {
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMap(connDetails ->
+                        webClient.get()
+                                .uri(connDetails.ollamaUrl() + "/api/version")
+                                .retrieve()
+                                .bodyToMono(OllamaVersionResponse.class)
                 );
     }
 
