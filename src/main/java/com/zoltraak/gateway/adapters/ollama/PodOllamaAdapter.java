@@ -22,66 +22,28 @@ public class PodOllamaAdapter implements OllamaPort {
 
     @Override
     public Flux<OllamaGenerateResponse> generate(OllamaGenerateRequest request) {
-        return gpuProviderPort
-                .getConnectionDetails()
-                .flatMapMany(connDetails ->
-                        webClient.post()
-                                .uri(connDetails.ollamaUrl() + "/api/generate")
-                                .bodyValue(request)
-                                .retrieve()
-                                .bodyToFlux(OllamaGenerateResponse.class)
-                );
+        return postAsFlux("/api/generate", request, OllamaGenerateResponse.class);
     }
 
     @Override
     public Flux<OllamaChatResponse> chat(OllamaChatRequest request) {
-        return gpuProviderPort
-                .getConnectionDetails()
-                .flatMapMany(connDetails ->
-                        webClient.post()
-                                .uri(connDetails.ollamaUrl() + "/api/chat")
-                                .bodyValue(request)
-                                .retrieve()
-                                .bodyToFlux(OllamaChatResponse.class)
-                );
+        return postAsFlux("/api/chat", request, OllamaChatResponse.class);
     }
 
     @Override
     public Mono<OllamaModelsResponse> getTags() {
-        return gpuProviderPort
-                .getConnectionDetails()
-                .flatMap(connDetails ->
-                        webClient.get()
-                                .uri(connDetails.ollamaUrl() + "/api/tags")
-                                .retrieve()
-                                .bodyToMono(OllamaModelsResponse.class)
-                );
+        return getAsMono("/api/tags", OllamaModelsResponse.class);
     }
 
     @Override
     public Mono<OllamaModelsResponse> getPs() {
-        return gpuProviderPort
-                .getConnectionDetails()
-                .flatMap(connDetails ->
-                        webClient.get()
-                                .uri(connDetails.ollamaUrl() + "/api/ps")
-                                .retrieve()
-                                .bodyToMono(OllamaModelsResponse.class)
-                );
+        return getAsMono("/api/ps", OllamaModelsResponse.class);
     }
 
     @Override
     public Mono<OllamaVersionResponse> getVersion() {
-        return gpuProviderPort
-                .getConnectionDetails()
-                .flatMap(connDetails ->
-                        webClient.get()
-                                .uri(connDetails.ollamaUrl() + "/api/version")
-                                .retrieve()
-                                .bodyToMono(OllamaVersionResponse.class)
-                );
+        return getAsMono("/api/version", OllamaVersionResponse.class);
     }
-
 
     @Override
     public Mono<Boolean> isHealthy() {
@@ -93,6 +55,30 @@ public class PodOllamaAdapter implements OllamaPort {
                                 .retrieve()
                                 .toBodilessEntity()
                                 .map(response -> response.getStatusCode().is2xxSuccessful())
+                                .onErrorReturn(false)
+                );
+    }
+
+    private <T, V> Flux<T> postAsFlux(String path, V body, Class<T> responseType) {
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMapMany(connDetails ->
+                        webClient.post()
+                                .uri(connDetails.ollamaUrl() + path)
+                                .bodyValue(body)
+                                .retrieve()
+                                .bodyToFlux(responseType)
+                );
+    }
+
+    private <T> Mono<T> getAsMono(String path, Class<T> responseType) {
+        return gpuProviderPort
+                .getConnectionDetails()
+                .flatMap(connDetails ->
+                        webClient.get()
+                                .uri(connDetails.ollamaUrl() + path)
+                                .retrieve()
+                                .bodyToMono(responseType)
                 );
     }
 }

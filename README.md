@@ -1,3 +1,5 @@
+![Java CI](https://github.com/sudosf/java-devcamp-product-shop/actions/workflows/master.yml/badge.svg)
+![Qodana](https://github.com/sudosf/java-devcamp-product-shop/actions/workflows/qodana_code_quality.yml/badge.svg)
 # Zoltraak Gateway
 
 Control plane for self-hosted LLM workloads. Manages GPU cloud instances on demand, proxies requests to Ollama and ComfyUI, and exposes a unified REST API for creative and coding features.
