@@ -91,6 +91,7 @@ public class VastAiAdapter implements GpuProviderPort {
 
     private Function<ClientResponse, Mono<? extends Throwable>> handleErrorResponse() {
         return response -> response.bodyToMono(String.class)
+                .defaultIfEmpty("No response body")
                 .map(body -> new ProviderException(
                         GpuProvider.VASTAI,
                         response.statusCode().value(),
