@@ -1,4 +1,4 @@
-![Java CI](https://github.com/sudosf/java-devcamp-product-shop/actions/workflows/master.yml/badge.svg)
+![Maven Test](https://github.com/sudosf/java-devcamp-product-shop/actions/workflows/master.yml/badge.svg)
 ![Qodana](https://github.com/sudosf/java-devcamp-product-shop/actions/workflows/qodana_code_quality.yml/badge.svg)
 # Zoltraak Gateway
 

@@ -5,7 +5,7 @@ on:
     branches: [ "master" ]
 
 jobs:
-  test:
+  master-test:
     runs-on: ubuntu-latest
     permissions:
       contents: write
