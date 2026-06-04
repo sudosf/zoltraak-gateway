@@ -22,7 +22,6 @@ public class ProviderProperties {
     @Data
     public static class VastAiConfig {
         private String apiKey;
-        private String instanceId;
         private String baseUrl;
     }
 }
