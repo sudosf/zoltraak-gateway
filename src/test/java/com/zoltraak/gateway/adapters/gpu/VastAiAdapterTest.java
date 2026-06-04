@@ -1,13 +1,14 @@
 package com.zoltraak.gateway.adapters.gpu;
 
 import com.zoltraak.gateway.config.properties.OllamaProperties;
-import com.zoltraak.gateway.config.properties.ProviderProperties;
+import com.zoltraak.gateway.domain.enums.GpuProvider;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.test.StepVerifier;
@@ -22,6 +23,7 @@ class VastAiAdapterTest {
 
     private MockWebServer mockWebServer;
     private VastAiAdapter adapter;
+    private OllamaProperties ollamaProperties;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -30,23 +32,19 @@ class VastAiAdapterTest {
 
         String baseUrl = "http://localhost:" + mockWebServer.getPort();
 
-        ProviderProperties.VastAiConfig vastAiConfig = mock(ProviderProperties.VastAiConfig.class);
-        when(vastAiConfig.getInstanceId()).thenReturn("test-instance-123");
-
-        ProviderProperties providerProperties = mock(ProviderProperties.class);
-        when(providerProperties.getVastAi()).thenReturn(vastAiConfig);
-
         OllamaProperties.GpuPodConfig gpuPodConfig = mock(OllamaProperties.GpuPodConfig.class);
         when(gpuPodConfig.getPort()).thenReturn(11434);
 
-        OllamaProperties ollamaProperties = mock(OllamaProperties.class);
+        this.ollamaProperties = mock(OllamaProperties.class);
         when(ollamaProperties.getGpuPod()).thenReturn(gpuPodConfig);
 
         WebClient webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .build();
 
-        adapter = new VastAiAdapter(providerProperties, webClient, ollamaProperties);
+        adapter = new VastAiAdapter(webClient, ollamaProperties);
+        adapter.init();
+        enqueueInstancePage();
     }
 
     @AfterEach
@@ -54,173 +52,202 @@ class VastAiAdapterTest {
         mockWebServer.shutdown();
     }
 
-    @Test
-    void start_sendsRunningState_toVastAi() throws InterruptedException {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(200));
-
-        StepVerifier.create(adapter.start())
-                .verifyComplete();
-
-        RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getBody().readUtf8()).contains("\"state\":\"running\"");
-    }
-
-    @Test
-    void start_throwsProviderException_whenVastAiErrors() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
-
-        StepVerifier.create(adapter.start())
-                .expectError(ProviderException.class)
-                .verify();
-    }
-
-    @Test
-    void stop_sendsStoppedState_toVastAi() throws InterruptedException {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(200));
-
-        StepVerifier.create(adapter.stop())
-                .verifyComplete();
-
-        RecordedRequest request = mockWebServer.takeRequest();
-        assertThat(request.getBody().readUtf8()).contains("\"state\":\"stopped\"");
-    }
-
-    @Test
-    void stop_throwsProviderException_whenVastAiErrors() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
-
-        StepVerifier.create(adapter.stop())
-                .expectError(ProviderException.class)
-                .verify();
-    }
-
-    @Test
-    void getStatus_returnsReady_whenInstanceIsRunning() {
+    private void enqueueInstancePage() {
         String json = """
-                {"instances": {"actual_status": "running", "public_ipaddr": "1.2.3.4"}}
+                {
+                    "instances": [
+                        {
+                            "id": 12345,
+                            "actual_status": "null",
+                            "public_ipaddr": "1.2.3.4",
+                            "ports": {
+                                "11434/tcp": [{"hostIp": "0.0.0.0", "hostPort": "55000"}]
+                            }
+                        }
+                    ]
+                }
                 """;
 
         mockWebServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
-
-        StepVerifier.create(adapter.getStatus())
-                .expectNext(PodStatus.READY)
-                .verifyComplete();
+                .setBody(json));
     }
 
-    @Test
-    void getStatus_returnsWarming_whenInstanceIsLoading() {
+    private void enqueueInstanceResponse(String actualStatus) {
+        String statusValue = actualStatus.equals("null")
+                ? "null"
+                : "\"" + actualStatus + "\"";
+
         String json = """
-                {"instances": {"actual_status": "loading", "public_ipaddr": "1.2.3.4"}}
-                """;
+                {
+                    "instances": {
+                            "id": 12345,
+                            "actual_status": %s,
+                            "public_ipaddr": "1.2.3.4",
+                            "ports": {
+                                "11434/tcp": [{"hostIp": "0.0.0.0", "hostPort": "55000"}]
+                            }
+                        }
+                }
+                """.formatted(statusValue);
 
         mockWebServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
-
-        StepVerifier.create(adapter.getStatus())
-                .expectNext(PodStatus.WARMING)
-                .verifyComplete();
+                .setBody(json));
     }
 
-    @Test
-    void getStatus_returnsStopped_whenInstanceStatusIsUnrecognised() {
-        String json = """
-                {"instances": {"actual_status": "exited", "public_ipaddr": "1.2.3.4"}}
-                """;
+    @Nested
+    class WhenInitializationFails {
+        @Test
+        void throwsProviderException_whenInitializationErrors() throws IOException {
+            try (MockWebServer localServer = new MockWebServer()) {
+                VastAiAdapter brokenAdapter = buildIsolatedAdapter(localServer,
+                        new MockResponse().setResponseCode(500));
 
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
+                StepVerifier.create(brokenAdapter.getConnectionDetails())
+                        .expectError(ProviderException.class)
+                        .verify();
+            }
+        }
 
-        StepVerifier.create(adapter.getStatus())
-                .expectNext(PodStatus.STOPPED)
-                .verifyComplete();
+        @Test
+        void throwsProviderException_whenResponseIsEmpty() throws IOException {
+            try (MockWebServer localServer = new MockWebServer()) {
+                MockResponse emptyResponse = new MockResponse()
+                        .setResponseCode(200)
+                        .setHeader("Content-Type", "application/json")
+                        .setBody("");
+
+                VastAiAdapter brokenAdapter = buildIsolatedAdapter(localServer, emptyResponse);
+
+                StepVerifier.create(brokenAdapter.getConnectionDetails())
+                        .expectError(ProviderException.class)
+                        .verify();
+            }
+        }
+
+        @Test
+        void throwsProviderException_whenInstanceListIsEmpty() throws IOException {
+            try (MockWebServer localServer = new MockWebServer()) {
+                String emptyListJson = """
+                        {
+                            "instances": []
+                        }
+                        """;
+
+                MockResponse emptyArrayResponse = new MockResponse()
+                        .setResponseCode(200)
+                        .setHeader("Content-Type", "application/json")
+                        .setBody(emptyListJson);
+
+                VastAiAdapter missingPodAdapter = buildIsolatedAdapter(localServer, emptyArrayResponse);
+
+                StepVerifier.create(missingPodAdapter.getConnectionDetails())
+                        .expectErrorMatches(throwable -> throwable instanceof ProviderException ex
+                                && ex.getHttpStatusCode() == 404
+                                && ex.getProvider() == GpuProvider.VASTAI)
+                        .verify();
+            }
+        }
+
+        private VastAiAdapter buildIsolatedAdapter(MockWebServer localServer, MockResponse response) throws IOException {
+            localServer.start();
+            localServer.enqueue(response);
+
+            WebClient localClient = WebClient.builder()
+                    .baseUrl("http://localhost:" + localServer.getPort())
+                    .build();
+
+            VastAiAdapter isolatedAdapter = new VastAiAdapter(localClient, ollamaProperties);
+            isolatedAdapter.init();
+            return isolatedAdapter;
+        }
     }
 
-    @Test
-    void getStatus_returnsStarting_whenActualStatusIsNull() {
-        String json = """
-                {"instances": {"actual_status": null, "public_ipaddr": "1.2.3.4"}}
-                """;
 
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
+    @Nested
+    class WhenStartingPod {
 
-        StepVerifier.create(adapter.getStatus())
-                .expectNext(PodStatus.STARTING)
-                .verifyComplete();
+        @Test
+        void sendsRunningState_toVastAi() throws InterruptedException {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(200));
+
+            StepVerifier.create(adapter.start())
+                    .verifyComplete();
+
+            mockWebServer.takeRequest();
+            RecordedRequest request = mockWebServer.takeRequest();
+            assertThat(request.getBody().readUtf8()).contains("\"state\":\"running\"");
+        }
     }
 
-    @Test
-    void getStatus_throwsProviderException_whenResponseIsEmpty() {
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody("")
-        );
+    @Nested
+    class WhenStoppingPod {
 
-        StepVerifier.create(adapter.getStatus())
-                .expectError(ProviderException.class)
-                .verify();
+        @Test
+        void sendsStoppedState_toVastAi() throws InterruptedException {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(200));
+
+            StepVerifier.create(adapter.stop())
+                    .verifyComplete();
+
+            mockWebServer.takeRequest();
+            RecordedRequest request = mockWebServer.takeRequest();
+            assertThat(request.getBody().readUtf8()).contains("\"state\":\"stopped\"");
+        }
     }
 
-    @Test
-    void getStatus_throwsProviderException_whenVastAiErrors() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+    @Nested
+    class WhenGettingStatus {
 
-        StepVerifier.create(adapter.getStatus())
-                .expectError(ProviderException.class)
-                .verify();
+        @Test
+        void returnsReady_whenInstanceIsRunning() {
+            enqueueInstanceResponse("running");
+
+            StepVerifier.create(adapter.getStatus())
+                    .expectNext(PodStatus.READY)
+                    .verifyComplete();
+        }
+
+        @Test
+        void returnsWarming_whenInstanceIsLoading() {
+            enqueueInstanceResponse("loading");
+
+            StepVerifier.create(adapter.getStatus())
+                    .expectNext(PodStatus.WARMING)
+                    .verifyComplete();
+        }
+
+        @Test
+        void returnsStopped_whenInstanceStatusIsUnrecognised() {
+            enqueueInstanceResponse("exited");
+
+            StepVerifier.create(adapter.getStatus())
+                    .expectNext(PodStatus.STOPPED)
+                    .verifyComplete();
+        }
+
+        @Test
+        void returnsStarting_whenActualStatusIsNull() {
+            enqueueInstanceResponse("null");
+
+            StepVerifier.create(adapter.getStatus())
+                    .expectNext(PodStatus.STARTING)
+                    .verifyComplete();
+        }
     }
 
-    @Test
-    void getConnectionDetails_returnsCorrectUrl_whenInstanceIsRunning() {
-        String json = """
-                {"instances": {"actual_status": "running", "public_ipaddr": "1.2.3.4"}}
-                """;
+    @Nested
+    class WhenGettingConnectionDetails {
 
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
-
-        StepVerifier.create(adapter.getConnectionDetails())
-                .expectNextMatches(details ->
-                        details.ollamaUrl().equals("http://1.2.3.4:11434"))
-                .verifyComplete();
-    }
-
-    @Test
-    void getConnectionDetails_throwsProviderException_whenResponseIsEmpty() {
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody("")
-        );
-
-        StepVerifier.create(adapter.getConnectionDetails())
-                .expectError(ProviderException.class)
-                .verify();
-    }
-
-    @Test
-    void getConnectionDetails_throwsProviderException_whenVastAiErrors() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
-
-        StepVerifier.create(adapter.getConnectionDetails())
-                .expectError(ProviderException.class)
-                .verify();
+        @Test
+        void returnsCorrectUrl_whenInstanceIsRunning() {
+            StepVerifier.create(adapter.getConnectionDetails())
+                    .expectNextMatches(details ->
+                            details.ollamaUrl().equals("http://1.2.3.4:55000"))
+                    .verifyComplete();
+        }
     }
 }
