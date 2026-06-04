@@ -81,6 +81,18 @@ public class VastAiAdapter implements GpuProviderPort {
                 });
     }
 
+    private Mono<Void> changeState(String state) {
+        return instanceMetadata.flatMap(instance ->
+                webClient.put()
+                        .uri("/api/v0/instances/%s".formatted(instance.getId()))
+                        .bodyValue(new VastAiManageRequest(state))
+                        .retrieve()
+                        .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
+                                handleErrorResponse())
+                        .bodyToMono(Void.class)
+        );
+    }
+
     private String getOllamaInstancePort(VastAiInstance instance) {
         int ollamaInternalPort = ollamaProperties.getGpuPod().getPort();
         List<VastAiPortBinding> portBindings = instance.getPorts().get(ollamaInternalPort + "/tcp");
@@ -103,18 +115,6 @@ public class VastAiAdapter implements GpuProviderPort {
                 .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
                         handleErrorResponse())
                 .bodyToMono(responseType);
-    }
-
-    private Mono<Void> changeState(String state) {
-        return instanceMetadata.flatMap(instance ->
-                webClient.put()
-                        .uri("/api/v0/instances/%s".formatted(instance.getId()))
-                        .bodyValue(new VastAiManageRequest(state))
-                        .retrieve()
-                        .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
-                                handleErrorResponse())
-                        .bodyToMono(Void.class)
-        );
     }
 
     private Function<ClientResponse, Mono<? extends Throwable>> handleErrorResponse() {
