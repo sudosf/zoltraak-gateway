@@ -166,7 +166,6 @@ class VastAiAdapterTest {
         }
     }
 
-
     @Nested
     class WhenStartingPod {
 

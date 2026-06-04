@@ -7,6 +7,7 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -19,6 +20,7 @@ import java.util.List;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+// TODO create and handle ollama exceptions
 class PodOllamaAdapterTest {
 
     private MockWebServer mockWebServer;
@@ -44,57 +46,8 @@ class PodOllamaAdapterTest {
         mockWebServer.shutdown();
     }
 
-    @Test
-    void isHealthy_returnsTrue_whenOllamaIsUp() {
-        mockWebServer.enqueue(
-                new MockResponse().setResponseCode(200)
-        );
-
-        StepVerifier.create(adapter.isHealthy())
-                .expectNext(true)
-                .verifyComplete();
-    }
-
-    @Test
-    void isHealthy_returnsFalse_whenOllamaIsDown() {
-        mockWebServer.enqueue(
-                new MockResponse().setResponseCode(500)
-        );
-
-        StepVerifier.create(adapter.isHealthy())
-                .expectNext(false)
-                .verifyComplete();
-    }
-
-    @Test
-    void getVersion_returnsVersion_whenOllamaResponds() {
-        String json = """
-                {"version": "0.9.0"}
-                """;
-
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
-
-        StepVerifier.create(adapter.getVersion())
-                .expectNextMatches(response -> response.version().equals("0.9.0"))
-                .verifyComplete();
-    }
-
-    @Test
-    void getVersion_errorsOut_whenOllamaIsDown() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
-
-        StepVerifier.create(adapter.getVersion())
-                .expectError(WebClientResponseException.class)
-                .verify();
-    }
-
-    @Test
-    void getTags_returnsModels_whenOllamaResponds() {
-        String json = """
+    private String modelsJson() {
+        return """
                 {
                     "models": [{
                         "name": "llama3",
@@ -113,136 +66,176 @@ class PodOllamaAdapterTest {
                     }]
                 }
                 """;
-
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
-
-        StepVerifier.create(adapter.getTags())
-                .expectNextMatches(response ->
-                        response.models().size() == 1 &&
-                                response.models().getFirst().name().equals("llama3"))
-                .verifyComplete();
     }
 
-    @Test
-    void getTags_errorsOut_whenOllamaIsDown() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+    @Nested
+    class WhenCheckingHealth {
 
-        StepVerifier.create(adapter.getTags())
-                .expectError(WebClientResponseException.class)
-                .verify();
+        @Test
+        void returnsTrue_whenOllamaIsUp() {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(200));
+
+            StepVerifier.create(adapter.isHealthy())
+                    .expectNext(true)
+                    .verifyComplete();
+        }
+
+        @Test
+        void returnsFalse_whenOllamaIsDown() {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+
+            StepVerifier.create(adapter.isHealthy())
+                    .expectNext(false)
+                    .verifyComplete();
+        }
     }
 
-    @Test
-    void getPs_returnsRunningModels_whenOllamaResponds() {
-        String json = """
-                {
-                    "models": [{
-                        "name": "llama3",
-                        "model": "llama3:latest",
-                        "modified_at": "2024-01-01T00:00:00Z",
-                        "size": 4000000000,
-                        "digest": "abc123",
-                        "details": {
-                            "format": "gguf",
-                            "family": "llama",
-                            "families": ["llama"],
-                            "parameter_size": "8B",
-                            "quantization_level": "Q4_0",
-                            "parent_model": ""
-                        }
-                    }]
-                }
-                """;
+    @Nested
+    class WhenGettingVersion {
 
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody(json)
-        );
+        @Test
+        void returnsVersion_whenOllamaResponds() {
+            mockWebServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("""
+                            {"version": "0.9.0"}
+                            """));
 
-        StepVerifier.create(adapter.getPs())
-                .expectNextMatches(response ->
-                        response.models().size() == 1 &&
-                                response.models().getFirst().name().equals("llama3"))
-                .verifyComplete();
+            StepVerifier.create(adapter.getVersion())
+                    .expectNextMatches(response -> response.version().equals("0.9.0"))
+                    .verifyComplete();
+        }
+
+        @Test
+        void errorsOut_whenOllamaIsDown() {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+
+            StepVerifier.create(adapter.getVersion())
+                    .expectError(WebClientResponseException.class)
+                    .verify();
+        }
     }
 
-    @Test
-    void getPs_errorsOut_whenOllamaIsDown() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+    @Nested
+    class WhenGettingTags {
 
-        StepVerifier.create(adapter.getPs())
-                .expectError(WebClientResponseException.class)
-                .verify();
+        @Test
+        void returnsModels_whenOllamaResponds() {
+            mockWebServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody(modelsJson()));
+
+            StepVerifier.create(adapter.getTags())
+                    .expectNextMatches(response ->
+                            response.models().size() == 1 &&
+                                    response.models().getFirst().name().equals("llama3"))
+                    .verifyComplete();
+        }
+
+        @Test
+        void errorsOut_whenOllamaIsDown() {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+
+            StepVerifier.create(adapter.getTags())
+                    .expectError(WebClientResponseException.class)
+                    .verify();
+        }
     }
 
-    @Test
-    void generate_streamsResponses_whenOllamaResponds() {
-        String ndjson = """
-                {"model":"llama3","created_at":"2024-01-01","response":"Hello","done":false}
-                {"model":"llama3","created_at":"2024-01-01","response":"","done":true,"done_reason":"stop"}
-                """;
+    @Nested
+    class WhenGettingPs {
 
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/x-ndjson")
-                .setBody(ndjson)
-        );
+        @Test
+        void returnsRunningModels_whenOllamaResponds() {
+            mockWebServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody(modelsJson()));
 
-        OllamaGenerateRequest request = new OllamaGenerateRequest("llama3", "say hello", null, true, false, null);
+            StepVerifier.create(adapter.getPs())
+                    .expectNextMatches(response ->
+                            response.models().size() == 1 &&
+                                    response.models().getFirst().name().equals("llama3"))
+                    .verifyComplete();
+        }
 
-        StepVerifier.create(adapter.generate(request))
-                .expectNextMatches(res -> res.response().equals("Hello") && !res.done())
-                .expectNextMatches(OllamaGenerateResponse::done)
-                .verifyComplete();
+        @Test
+        void errorsOut_whenOllamaIsDown() {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+
+            StepVerifier.create(adapter.getPs())
+                    .expectError(WebClientResponseException.class)
+                    .verify();
+        }
     }
 
-    @Test
-    void generate_errorsOut_whenOllamaIsDown() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+    @Nested
+    class WhenGenerating {
 
-        OllamaGenerateRequest request = new OllamaGenerateRequest("llama3", "say hello", null, true, false, null);
+        @Test
+        void streamsResponses_whenOllamaResponds() {
+            mockWebServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/x-ndjson")
+                    .setBody("""
+                            {"model":"llama3","created_at":"2024-01-01","response":"Hello","done":false}
+                            {"model":"llama3","created_at":"2024-01-01","response":"","done":true,"done_reason":"stop"}
+                            """));
 
-        StepVerifier.create(adapter.generate(request))
-                .expectError(WebClientResponseException.class)
-                .verify();
+            OllamaGenerateRequest request = new OllamaGenerateRequest("llama3", "say hello", null, true, false, null);
+
+            StepVerifier.create(adapter.generate(request))
+                    .expectNextMatches(res -> res.response().equals("Hello") && !res.done())
+                    .expectNextMatches(OllamaGenerateResponse::done)
+                    .verifyComplete();
+        }
+
+        @Test
+        void errorsOut_whenOllamaIsDown() {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+
+            OllamaGenerateRequest request = new OllamaGenerateRequest("llama3", "say hello", null, true, false, null);
+
+            StepVerifier.create(adapter.generate(request))
+                    .expectError(WebClientResponseException.class)
+                    .verify();
+        }
     }
 
-    @Test
-    void chat_streamsResponses_whenOllamaResponds() {
-        String ndjson = """
-                {"model":"llama3","created_at":"2024-01-01","message":{"role":"assistant","content":"Hi"},"done":false}
-                {"model":"llama3","created_at":"2024-01-01","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop"}
-                """;
+    @Nested
+    class WhenChatting {
 
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/x-ndjson")
-                .setBody(ndjson)
-        );
+        @Test
+        void streamsResponses_whenOllamaResponds() {
+            mockWebServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/x-ndjson")
+                    .setBody("""
+                            {"model":"llama3","created_at":"2024-01-01","message":{"role":"assistant","content":"Hi"},"done":false}
+                            {"model":"llama3","created_at":"2024-01-01","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop"}
+                            """));
 
-        OllamaMessage message = new OllamaMessage("user", "say hello", null, null);
-        OllamaChatRequest request = new OllamaChatRequest("llama3", List.of(message), true, false);
+            OllamaMessage message = new OllamaMessage("user", "say hello", null, null);
+            OllamaChatRequest request = new OllamaChatRequest("llama3", List.of(message), true, false);
 
-        StepVerifier.create(adapter.chat(request))
-                .expectNextMatches(r -> r.message().content().equals("Hi") && !r.done())
-                .expectNextMatches(OllamaChatResponse::done)
-                .verifyComplete();
-    }
+            StepVerifier.create(adapter.chat(request))
+                    .expectNextMatches(r -> r.message().content().equals("Hi") && !r.done())
+                    .expectNextMatches(OllamaChatResponse::done)
+                    .verifyComplete();
+        }
 
-    @Test
-    void chat_errorsOut_whenOllamaIsDown() {
-        mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+        @Test
+        void errorsOut_whenOllamaIsDown() {
+            mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
-        OllamaMessage message = new OllamaMessage("user", "say hello", null, null);
-        OllamaChatRequest request = new OllamaChatRequest("llama3", List.of(message), true, false);
+            OllamaMessage message = new OllamaMessage("user", "say hello", null, null);
+            OllamaChatRequest request = new OllamaChatRequest("llama3", List.of(message), true, false);
 
-        StepVerifier.create(adapter.chat(request))
-                .expectError(WebClientResponseException.class)
-                .verify();
+            StepVerifier.create(adapter.chat(request))
+                    .expectError(WebClientResponseException.class)
+                    .verify();
+        }
     }
 }
