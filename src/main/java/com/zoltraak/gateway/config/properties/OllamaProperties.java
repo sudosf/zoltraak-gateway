@@ -12,7 +12,6 @@ public class OllamaProperties {
 
     @Data
     public static class GpuPodConfig {
-        private String modelVision;
         private Integer port;
     }
 
