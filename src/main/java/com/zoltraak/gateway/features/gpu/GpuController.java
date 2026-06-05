@@ -1,6 +1,5 @@
 package com.zoltraak.gateway.features.gpu;
 
-import com.zoltraak.gateway.adapters.gpu.GpuProviderPort;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.response.GatewayResponse;
 import org.springframework.http.ResponseEntity;
@@ -11,30 +10,35 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api/v1/gpu")
+@RequestMapping(GpuController.BASE_PATH)
 public class GpuController {
 
-    private final GpuProviderPort gpuProviderPort;
+    public static final String BASE_PATH = "/api/v1/gpu";
+    public static final String STATUS = "/status";
+    public static final String START = "/start";
+    public static final String STOP = "/stop";
 
-    public GpuController(GpuProviderPort gpuProviderPort) {
-        this.gpuProviderPort = gpuProviderPort;
+    private final GpuLifecycleManager gpuLifecycleManager;
+
+    public GpuController(GpuLifecycleManager gpuLifecycleManager) {
+        this.gpuLifecycleManager = gpuLifecycleManager;
     }
 
-    @GetMapping("/status")
-    public Mono<ResponseEntity<GatewayResponse<PodStatus>>> getStatus() {
-        return gpuProviderPort.getStatus()
-                .map(status -> ResponseEntity.ok(GatewayResponse.success(status)));
+    @GetMapping(STATUS)
+    public ResponseEntity<GatewayResponse<PodStatus>> getStatus() {
+        PodStatus status = gpuLifecycleManager.getStatus();
+        return ResponseEntity.ok(GatewayResponse.success(status));
     }
 
-    @PostMapping("/start")
+    @PostMapping(START)
     public Mono<ResponseEntity<GatewayResponse<Void>>> start() {
-        return gpuProviderPort.start()
+        return gpuLifecycleManager.requestStart()
                 .then(Mono.just(ResponseEntity.ok(GatewayResponse.success(null))));
     }
 
-    @PostMapping("/stop")
+    @PostMapping(STOP)
     public Mono<ResponseEntity<GatewayResponse<Void>>> stop() {
-        return gpuProviderPort.stop()
+        return gpuLifecycleManager.requestShutdown()
                 .then(Mono.just(ResponseEntity.ok(GatewayResponse.success(null))));
     }
 }
