@@ -3,12 +3,14 @@ package com.zoltraak.gateway.adapters.ollama;
 import com.zoltraak.gateway.adapters.gpu.GpuProviderPort;
 import com.zoltraak.gateway.annotations.Adapter;
 import com.zoltraak.gateway.domain.models.ollama.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Adapter
 @Primary
 public class PodOllamaAdapter implements OllamaPort {
@@ -49,14 +51,18 @@ public class PodOllamaAdapter implements OllamaPort {
     public Mono<Boolean> isHealthy() {
         return gpuProviderPort
                 .getConnectionDetails()
-                .flatMap(connDetails ->
-                        webClient.get()
-                                .uri(connDetails.ollamaUrl())
-                                .retrieve()
-                                .toBodilessEntity()
-                                .map(response -> response.getStatusCode().is2xxSuccessful())
-                                .onErrorReturn(false)
-                );
+                .flatMap(connDetails -> {
+                            log.debug("Ollama health check -> {}", connDetails.ollamaUrl());
+                            return webClient.get()
+                                    .uri(connDetails.ollamaUrl())
+                                    .retrieve()
+                                    .toBodilessEntity()
+                                    .map(response -> response.getStatusCode().is2xxSuccessful())
+                                    .onErrorReturn(false);
+                        }
+                ).doOnSuccess(healthy -> {
+                    if (Boolean.FALSE.equals(healthy)) log.warn("Ollama health check returned unhealthy");
+                });
     }
 
     private <T, V> Flux<T> postAsFlux(String path, V body, Class<T> responseType) {
@@ -67,8 +73,9 @@ public class PodOllamaAdapter implements OllamaPort {
                                 .uri(connDetails.ollamaUrl() + path)
                                 .bodyValue(body)
                                 .retrieve()
-                                .bodyToFlux(responseType)
-                );
+                                .bodyToFlux(responseType))
+                .doOnSubscribe(_ -> log.debug("Ollama POST {}", path))
+                .doOnError(e -> log.warn("Ollama POST {} failed: {}", path, e.getMessage()));
     }
 
     private <T> Mono<T> getAsMono(String path, Class<T> responseType) {
@@ -78,7 +85,8 @@ public class PodOllamaAdapter implements OllamaPort {
                         webClient.get()
                                 .uri(connDetails.ollamaUrl() + path)
                                 .retrieve()
-                                .bodyToMono(responseType)
-                );
+                                .bodyToMono(responseType))
+                .doOnSubscribe(_ -> log.debug("Ollama GET {}", path))
+                .doOnError(e -> log.warn("Ollama GET {} failed: {}", path, e.getMessage()));
     }
 }

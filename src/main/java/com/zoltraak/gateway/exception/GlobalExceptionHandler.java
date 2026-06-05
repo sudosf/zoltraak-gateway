@@ -1,20 +1,22 @@
-package com.zoltraak.gateway.adapters.shared;
+package com.zoltraak.gateway.exception;
 
 import com.zoltraak.gateway.adapters.gpu.ProviderException;
 import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
 import com.zoltraak.gateway.domain.exception.GatewayServiceException;
 import com.zoltraak.gateway.domain.response.GatewayResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProviderException.class)
     public ResponseEntity<GatewayResponse<Void>> handleProviderException(ProviderException ex) {
-        ex.printStackTrace(); // TODO: remove in production
+        log.error("Provider error code={} message={}", ex.getHttpStatusCode(), ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(GatewayResponse.error(
@@ -24,15 +26,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GatewayServiceException.class)
     public ResponseEntity<GatewayResponse<Void>> handleServiceException(GatewayServiceException ex) {
-        ex.printStackTrace(); // TODO: remove in production
+        log.error("Service error code={} message={}", ex.getGatewayErrorCode(), ex.getMessage());
         return ResponseEntity
-                .status(mapToHttpStatus(ex.getCode()))
-                .body(GatewayResponse.error(ex.getCode(), ex.getMessage()));
+                .status(mapToHttpStatus(ex.getGatewayErrorCode()))
+                .body(GatewayResponse.error(ex.getGatewayErrorCode(), ex.getMessage()));
     }
 
     @ExceptionHandler(Throwable.class)
     public ResponseEntity<GatewayResponse<Void>> handleThrowable(Throwable ex) {
-        ex.printStackTrace(); // TODO: remove in production
+        log.error("Unhandled exception", ex);
         return ResponseEntity
                 .internalServerError()
                 .body(GatewayResponse.error(
