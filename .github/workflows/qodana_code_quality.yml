@@ -24,6 +24,7 @@ jobs:
         with:
           pr-mode: false
           cache-default-branch-only: true
+          primary-cache-key: qodana-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_1806812611 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
