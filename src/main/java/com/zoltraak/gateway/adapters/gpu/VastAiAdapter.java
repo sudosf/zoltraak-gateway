@@ -7,6 +7,7 @@ import com.zoltraak.gateway.domain.enums.GpuProvider;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.models.provider.PodConnectionDetails;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -17,6 +18,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
+@Slf4j
 @Adapter
 @ConditionalOnProperty(name = "zoltraak.provider.active", havingValue = "vastai")
 public class VastAiAdapter implements GpuProviderPort {
@@ -77,19 +79,25 @@ public class VastAiAdapter implements GpuProviderPort {
                     String ipAddress = instance.getPublicIpaddr();
                     String ollamaInstancePort = getOllamaInstancePort(instance);
                     String ollamaUrl = "http://%s:%s".formatted(ipAddress, ollamaInstancePort);
+
+                    log.debug("Vast.ai resolved ollama url={}", ollamaUrl);
                     return new PodConnectionDetails(ollamaUrl, null);
                 });
     }
 
     private Mono<Void> changeState(String state) {
-        return instanceMetadata.flatMap(instance ->
-                webClient.put()
-                        .uri("/api/v0/instances/%s".formatted(instance.getId()))
-                        .bodyValue(new VastAiManageRequest(state))
-                        .retrieve()
-                        .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
-                                handleErrorResponse())
-                        .bodyToMono(Void.class)
+        return instanceMetadata.flatMap(instance -> {
+                    log.info("Vast.ai [{}] instance={}", state, instance.getId());
+                    return webClient.put()
+                            .uri("/api/v0/instances/%s".formatted(instance.getId()))
+                            .bodyValue(new VastAiManageRequest(state))
+                            .retrieve()
+                            .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
+                                    handleErrorResponse())
+                            .bodyToMono(Void.class)
+                            .doOnSuccess(_ -> log.debug("Vast.ai [{}] completed instance={}", state, instance.getId()))
+                            .doOnError(e -> log.warn("Vast.ai [{}] failed instance={}: {}", state, instance.getId(), e.getMessage()));
+                }
         );
     }
 
@@ -114,7 +122,9 @@ public class VastAiAdapter implements GpuProviderPort {
                 .retrieve()
                 .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
                         handleErrorResponse())
-                .bodyToMono(responseType);
+                .bodyToMono(responseType)
+                .doOnSubscribe(_ -> log.debug("Vast.ai GET {}", path))
+                .doOnError(e -> log.warn("Vast.ai GET {} failed: {}", path, e.getMessage()));
     }
 
     private Function<ClientResponse, Mono<? extends Throwable>> handleErrorResponse() {

@@ -6,10 +6,10 @@ import lombok.Getter;
 @Getter
 public class GatewayServiceException extends ZoltraakGatewayException {
 
-    private final GatewayErrorCode code;
+    private final GatewayErrorCode gatewayErrorCode;
 
     public GatewayServiceException(GatewayErrorCode code, String message) {
         super(message);
-        this.code = code;
+        this.gatewayErrorCode = code;
     }
 }
