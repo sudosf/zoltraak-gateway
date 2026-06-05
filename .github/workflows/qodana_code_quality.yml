@@ -7,7 +7,6 @@ on:
   pull_request:
     branches:
       - master
-
 jobs:
   qodana:
     runs-on: ubuntu-latest
@@ -20,6 +19,13 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            maven-${{ runner.os }}-
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@v2026.1
         with:
@@ -28,3 +34,4 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_1806812611 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
+          
