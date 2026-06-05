@@ -24,3 +24,4 @@ TODO
 - [Project Structure](https://www.notion.so/Project-Structure-3543302b53c480a3b990ceb2b09b4954?source=copy_link)
 - [Sequence Diagrams](https://www.notion.so/Sequence-Diagrams-3543302b53c4807fa371da27a3eabe8b?source=copy_link)
 - [Domain Models](https://www.notion.so/Domain-Models-3543302b53c480249e0cd3faba0d6c23?source=copy_link) 
+
