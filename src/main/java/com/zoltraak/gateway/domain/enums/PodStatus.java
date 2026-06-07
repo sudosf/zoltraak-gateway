@@ -5,5 +5,6 @@ public enum PodStatus {
     STARTING,
     WARMING,
     READY,
-    STOPPING
+    STOPPING,
+    DEGRADED
 }
