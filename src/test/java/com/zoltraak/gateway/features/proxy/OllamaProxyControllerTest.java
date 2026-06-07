@@ -72,7 +72,7 @@ class OllamaProxyControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(request)
                 .exchange()
-                .expectStatus().isBadRequest()
+                .expectStatus().isOk()
                 .expectHeader().contentTypeCompatibleWith(MediaType.valueOf("application/x-ndjson"));
 
         verify(ollamaProxyService).forwardGenerate(any(OllamaGenerateRequest.class));
