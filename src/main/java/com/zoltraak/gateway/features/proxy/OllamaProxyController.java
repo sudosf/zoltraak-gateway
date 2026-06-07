@@ -1,6 +1,5 @@
 package com.zoltraak.gateway.features.proxy;
 
-import com.zoltraak.gateway.adapters.ollama.OllamaPort;
 import com.zoltraak.gateway.domain.models.ollama.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -8,37 +7,44 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping(OllamaProxyController.BASE_PATH)
 public class OllamaProxyController {
 
-    private final OllamaPort ollamaPort;
+    public static final String BASE_PATH = "/api";
+    public static final String CHAT = "/chat";
+    public static final String GENERATE = "/generate";
+    public static final String VERSION = "/version";
+    public static final String PS = "/ps";
+    public static final String TAGS = "/tags";
 
-    public OllamaProxyController(OllamaPort ollamaPort) {
-        this.ollamaPort = ollamaPort;
+    private final OllamaProxyService ollamaProxyService;
+
+    public OllamaProxyController(OllamaProxyService ollamaProxyService) {
+        this.ollamaProxyService = ollamaProxyService;
     }
 
-    @PostMapping(value = "/chat", produces = "application/x-ndjson")
+    @PostMapping(value = CHAT, produces = "application/x-ndjson")
     public Flux<OllamaChatResponse> chat(@RequestBody OllamaChatRequest request) {
-        return ollamaPort.chat(request);
+        return ollamaProxyService.forwardChat(request);
     }
-    
-    @PostMapping(value = "/generate", produces = "application/x-ndjson")
+
+    @PostMapping(value = GENERATE, produces = "application/x-ndjson")
     public Flux<OllamaGenerateResponse> generate(@RequestBody OllamaGenerateRequest request) {
-        return ollamaPort.generate(request);
+        return ollamaProxyService.forwardGenerate(request);
     }
 
-    @GetMapping("/tags")
+    @GetMapping(TAGS)
     public Mono<ResponseEntity<OllamaModelsResponse>> getTags() {
-        return ollamaPort.getTags().map(ResponseEntity::ok);
+        return ollamaProxyService.getTags().map(ResponseEntity::ok);
     }
 
-    @GetMapping("/version")
+    @GetMapping(VERSION)
     public Mono<ResponseEntity<OllamaVersionResponse>> getVersion() {
-        return ollamaPort.getVersion().map(ResponseEntity::ok);
+        return ollamaProxyService.getVersion().map(ResponseEntity::ok);
     }
 
-    @GetMapping("/ps")
+    @GetMapping(PS)
     public Mono<ResponseEntity<OllamaModelsResponse>> getPs() {
-        return ollamaPort.getPs().map(ResponseEntity::ok);
+        return ollamaProxyService.getPs().map(ResponseEntity::ok);
     }
 }
