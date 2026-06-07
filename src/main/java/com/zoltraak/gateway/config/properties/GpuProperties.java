@@ -3,10 +3,11 @@ package com.zoltraak.gateway.config.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "zoltraak.gpu")
 @Data
+@ConfigurationProperties(prefix = "zoltraak.gpu")
 public class GpuProperties {
     private Integer idleTimeoutMinutes;
-    private Integer warmupTimeoutSeconds;
+    private Integer warmupTimeoutMinutes;
     private Integer warmupPollIntervalSeconds;
+    private Integer idleCheckIntervalSeconds;
 }
