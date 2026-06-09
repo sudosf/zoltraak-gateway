@@ -16,20 +16,24 @@ public class GpuLifecycleManager {
 
     private final GpuProviderPort gpuProviderPort;
     private final PodState podState;
+    private final RequestQueue requestQueue;
 
-    public GpuLifecycleManager(GpuProviderPort gpuProviderPort, ProviderProperties providerProperties) {
+    public GpuLifecycleManager(GpuProviderPort gpuProviderPort, ProviderProperties providerProperties, RequestQueue requestQueue) {
         this.gpuProviderPort = gpuProviderPort;
         this.podState = new PodState();
         this.podState.setStatus(PodStatus.STOPPED);
         this.podState.setProvider(providerProperties.getActive());
+        this.requestQueue = requestQueue;
     }
 
     @PostConstruct
     void init() {
         gpuProviderPort.getStatus()
                 .doOnSuccess(status -> {
+                    log.info("GPU pod startup status: {}", status);
                     podState.setStatus(status);
                     if (status != PodStatus.STOPPED) {
+                        podState.setSessionStartedAt(LocalDateTime.now());
                         podState.setLastActivityAt(LocalDateTime.now());
                     }
                 })
@@ -42,7 +46,8 @@ public class GpuLifecycleManager {
         PodStatus current = podState.getStatus();
         if (current == PodStatus.STARTING
                 || current == PodStatus.READY
-                || current == PodStatus.WARMING) {
+                || current == PodStatus.WARMING
+                || current == PodStatus.DEGRADED) {
             log.debug("GPU pod already {}, ignoring start request", current);
             return Mono.empty();
         }
@@ -60,6 +65,7 @@ public class GpuLifecycleManager {
                 .doOnError(e -> {
                     log.warn("GPU pod start failed, rolling back status={}", current, e);
                     podState.setStatus(current);
+                    requestQueue.onPodStartFailed(current);
                 });
     }
 
@@ -69,7 +75,11 @@ public class GpuLifecycleManager {
             log.debug("GPU pod already {}, ignoring shutdown request", current);
             return Mono.empty();
         }
-        // TODO: check in-flight count via RequestQueue
+
+        if (!requestQueue.isEmpty()) {
+            log.warn("GPU Pod shutdown rejected, request queue is not empty.");
+            return Mono.empty();
+        }
 
         podState.setStatus(PodStatus.STOPPING);
         return gpuProviderPort.stop()
@@ -84,13 +94,20 @@ public class GpuLifecycleManager {
                 });
     }
 
+    public void onPodReady() {
+        podState.setStatus(PodStatus.READY);
+        requestQueue.onPodReady();
+    }
+
+    public void onPodDegraded() {
+        podState.setStatus(PodStatus.DEGRADED);
+        requestQueue.onPodDegraded();
+    }
+
     public PodStatus getStatus() {
         return podState.getStatus();
     }
 
-    public void setStatus(PodStatus status) {
-        podState.setStatus(status);
-    }
 
     public LocalDateTime getLastActivityAt() {
         return podState.getLastActivityAt();
@@ -101,6 +118,7 @@ public class GpuLifecycleManager {
     }
 
     public void resetIdleTimer() {
+        log.debug("GPU pod resetting idle timer");
         podState.setLastActivityAt(LocalDateTime.now());
     }
 }
