@@ -1,6 +1,5 @@
 #!/bin/bash
 # Zoltraak Pod Setup - Ollama + Vision Model
-set -e
 
 echo "=== Installing system tools ==="
 apt update && apt install -y pciutils lshw curl
@@ -9,7 +8,11 @@ echo "=== Checking GPU ==="
 nvidia-smi
 
 echo "=== Installing Ollama ==="
-curl -fsSL https://ollama.com/install.sh | sh
+if ! command -v ollama &> /dev/null; then
+  curl -fsSL https://ollama.com/install.sh | sh
+else
+  echo "Ollama already installed, skipping"
+fi
 
 echo "=== Starting Ollama server ==="
 export OLLAMA_HOST=0.0.0.0
@@ -23,11 +26,10 @@ until curl -s http://localhost:11434 > /dev/null; do
 done
 echo "Ollama is up"
 
-echo "=== Pulling vision model ==="
+echo "=== Pulling models ==="
 ollama pull huihui_ai/qwen3.5-abliterated:4b
-ollama pull huihui_ai/qwen3-vl-abliterated:4b
 ollama pull Tohur/natsumura-storytelling-rp-llama-3.1
-ollama pull Tohur/natsumura-code-llama-3.1
+ollama pull qwen2.5-coder:32b
 
 echo "=== Done ==="
-echo "Ollama log: tail -f ollama.log"
+echo "Ollama log: tail -f /workspace/ollama.log"
