@@ -44,7 +44,6 @@ class VastAiAdapterTest {
 
         adapter = new VastAiAdapter(webClient, ollamaProperties);
         adapter.init();
-        enqueueInstancePage();
     }
 
     @AfterEach
@@ -61,7 +60,7 @@ class VastAiAdapterTest {
                             "actual_status": "null",
                             "public_ipaddr": "1.2.3.4",
                             "ports": {
-                                "11434/tcp": [{"hostIp": "0.0.0.0", "hostPort": "55000"}]
+                                "11434/tcp": [{"HostIp": "0.0.0.0", "HostPort": "55000"}]
                             }
                         }
                     ]
@@ -86,7 +85,7 @@ class VastAiAdapterTest {
                             "actual_status": %s,
                             "public_ipaddr": "1.2.3.4",
                             "ports": {
-                                "11434/tcp": [{"hostIp": "0.0.0.0", "hostPort": "55000"}]
+                                "11434/tcp": [{"HostIp": "0.0.0.0", "HostPort": "55000"}]
                             }
                         }
                 }
@@ -100,6 +99,12 @@ class VastAiAdapterTest {
 
     @Nested
     class WhenInitializationFails {
+
+        @BeforeEach
+        void setUp() {
+            enqueueInstancePage();
+        }
+
         @Test
         void throwsProviderException_whenInitializationErrors() throws IOException {
             try (MockWebServer localServer = new MockWebServer()) {
@@ -169,6 +174,10 @@ class VastAiAdapterTest {
     @Nested
     class WhenStartingPod {
 
+        @BeforeEach
+        void setUp() {
+            enqueueInstancePage();
+        }
         @Test
         void sendsRunningState_toVastAi() throws InterruptedException {
             mockWebServer.enqueue(new MockResponse().setResponseCode(200));
@@ -184,6 +193,11 @@ class VastAiAdapterTest {
 
     @Nested
     class WhenStoppingPod {
+
+        @BeforeEach
+        void setUp() {
+            enqueueInstancePage();
+        }
 
         @Test
         void sendsStoppedState_toVastAi() throws InterruptedException {
@@ -201,12 +215,17 @@ class VastAiAdapterTest {
     @Nested
     class WhenGettingStatus {
 
+        @BeforeEach
+        void setUp() {
+            enqueueInstancePage();
+        }
+
         @Test
-        void returnsReady_whenInstanceIsRunning() {
+        void returnsWarming_whenInstanceIsRunning() {
             enqueueInstanceResponse("running");
 
             StepVerifier.create(adapter.getStatus())
-                    .expectNext(PodStatus.READY)
+                    .expectNext(PodStatus.WARMING)
                     .verifyComplete();
         }
 
@@ -243,10 +262,28 @@ class VastAiAdapterTest {
 
         @Test
         void returnsCorrectUrl_whenInstanceIsRunning() {
+            enqueueInstancePage();
+
             StepVerifier.create(adapter.getConnectionDetails())
                     .expectNextMatches(details ->
                             details.ollamaUrl().equals("http://1.2.3.4:55000"))
                     .verifyComplete();
+        }
+
+        @Test
+        void throwsProviderException_whenPortBindingsAreMissing() {
+
+            mockWebServer.enqueue(new MockResponse()
+                    .setBody("""
+                            {"instances": [{"id": "123", "public_ipaddr": "1.2.3.4"}]}
+                            """)
+                    .addHeader("Content-Type", "application/json")
+            );
+
+            StepVerifier.create(adapter.getConnectionDetails())
+                    .expectError(ProviderException.class)
+                    .verify();
+
         }
     }
 }

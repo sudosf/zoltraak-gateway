@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 @Slf4j
@@ -40,7 +41,7 @@ public class VastAiAdapter implements GpuProviderPort {
                 .switchIfEmpty(Mono.error(new ProviderException(
                         GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai")))
                 .cache(
-                        _ -> Duration.ofDays(365),
+                        instance -> instance.getPorts() != null ? Duration.ofDays(365) : Duration.ZERO,
                         _ -> Duration.ZERO,
                         () -> Duration.ZERO
                 );
@@ -63,8 +64,7 @@ public class VastAiAdapter implements GpuProviderPort {
                 .switchIfEmpty(Mono.error(new ProviderException(
                         GpuProvider.VASTAI, 500, "Empty response from Vast.ai")))
                 .map(instance -> switch (instance.instances().getActualStatus()) {
-                    case "running" -> PodStatus.READY;
-                    case "loading" -> PodStatus.WARMING;
+                    case "running", "loading" -> PodStatus.WARMING;
                     case null -> PodStatus.STARTING;
                     default -> PodStatus.STOPPED;
                 });
@@ -103,7 +103,13 @@ public class VastAiAdapter implements GpuProviderPort {
 
     private String getOllamaInstancePort(VastAiInstance instance) {
         int ollamaInternalPort = ollamaProperties.getGpuPod().getPort();
-        List<VastAiPortBinding> portBindings = instance.getPorts().get(ollamaInternalPort + "/tcp");
+
+        Map<String, List<VastAiPortBinding>> ports = instance.getPorts();
+        if (ports == null) {
+            throw new ProviderException(GpuProvider.VASTAI, 503, "Port bindings not yet available");
+        }
+
+        List<VastAiPortBinding> portBindings = ports.get(ollamaInternalPort + "/tcp");
         return portBindings.getFirst().hostPort();
     }
 
