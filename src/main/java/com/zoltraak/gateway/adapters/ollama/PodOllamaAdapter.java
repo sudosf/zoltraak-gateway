@@ -51,18 +51,13 @@ public class PodOllamaAdapter implements OllamaPort {
     public Mono<Boolean> isHealthy() {
         return gpuProviderPort
                 .getConnectionDetails()
-                .flatMap(connDetails -> {
-                            log.debug("Ollama health check -> {}", connDetails.ollamaUrl());
-                            return webClient.get()
-                                    .uri(connDetails.ollamaUrl())
-                                    .retrieve()
-                                    .toBodilessEntity()
-                                    .map(response -> response.getStatusCode().is2xxSuccessful())
-                                    .onErrorReturn(false);
-                        }
-                ).doOnSuccess(healthy -> {
-                    if (Boolean.FALSE.equals(healthy)) log.warn("Ollama health check returned unhealthy");
-                });
+                .flatMap(connDetails -> webClient.get()
+                        .uri(connDetails.ollamaUrl())
+                        .retrieve()
+                        .toBodilessEntity()
+                        .map(response -> response.getStatusCode().is2xxSuccessful())
+                        .onErrorReturn(false)
+                );
     }
 
     private <T, V> Flux<T> postAsFlux(String path, V body, Class<T> responseType) {
