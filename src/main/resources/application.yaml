@@ -35,8 +35,8 @@ zoltraak:
     warmup-poll-interval-seconds: 5
 
   queue:
-    max-wait-seconds: 180
-    expiry-check-interval-seconds: 10
+    max-wait-minutes: 5
+    expiry-check-interval-seconds: 30
 
 logging:
   level:
