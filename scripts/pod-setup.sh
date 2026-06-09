@@ -32,4 +32,3 @@ ollama pull Tohur/natsumura-storytelling-rp-llama-3.1
 ollama pull qwen2.5-coder:32b
 
 echo "=== Done ==="
-echo "Ollama log: tail -f /workspace/ollama.log"
