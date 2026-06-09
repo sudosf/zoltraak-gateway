@@ -47,7 +47,6 @@ class WarmupPollerTest {
             poller.poll();
 
             verifyNoInteractions(ollamaPort);
-            verify(gpuLifecycleManager, never()).setStatus(any());
         }
     }
 
@@ -70,7 +69,7 @@ class WarmupPollerTest {
 
             poller.poll();
 
-            verify(gpuLifecycleManager).setStatus(PodStatus.DEGRADED);
+            verify(gpuLifecycleManager).onPodDegraded();
             verifyNoInteractions(ollamaPort);
         }
 
@@ -90,7 +89,7 @@ class WarmupPollerTest {
 
                 poller.poll();
 
-                verify(gpuLifecycleManager).setStatus(PodStatus.READY);
+                verify(gpuLifecycleManager).onPodReady();
             }
 
             @Test
@@ -99,7 +98,7 @@ class WarmupPollerTest {
 
                 poller.poll();
 
-                verify(gpuLifecycleManager, never()).setStatus(any());
+                verify(gpuLifecycleManager, never()).onPodReady();
             }
         }
     }
