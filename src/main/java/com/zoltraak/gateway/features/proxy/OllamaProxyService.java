@@ -4,19 +4,27 @@ import com.zoltraak.gateway.adapters.ollama.OllamaPort;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.models.ollama.*;
 import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
+import com.zoltraak.gateway.features.gpu.QueuedRequest;
+import com.zoltraak.gateway.features.gpu.RequestQueue;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 @Service
 public class OllamaProxyService {
 
     private final OllamaPort ollamaPort;
     private final GpuLifecycleManager gpuLifecycleManager;
+    private final RequestQueue requestQueue;
 
-    public OllamaProxyService(OllamaPort ollamaPort, GpuLifecycleManager gpuLifecycleManager) {
+    public OllamaProxyService(OllamaPort ollamaPort, GpuLifecycleManager gpuLifecycleManager, RequestQueue requestQueue) {
         this.ollamaPort = ollamaPort;
         this.gpuLifecycleManager = gpuLifecycleManager;
+        this.requestQueue = requestQueue;
     }
 
     public Flux<OllamaChatResponse> forwardChat(OllamaChatRequest request) {
@@ -40,31 +48,50 @@ public class OllamaProxyService {
     }
 
     public <T> Mono<T> withPodReady(Mono<T> operation) {
-        return checkPodReady().then(operation);
+        if (isPodAvailable()) return operation;
+
+        return Mono.create(sink -> requestQueue.enqueue(
+                createQueuedRequest(
+                        () -> operation.subscribe(sink::success, sink::error),
+                        sink::error
+                )));
     }
 
     public <T> Flux<T> withPodReady(Flux<T> operation) {
-        return checkPodReady().thenMany(operation);
+        if (isPodAvailable()) return operation;
+
+        return Flux.create(sink -> requestQueue.enqueue(
+                createQueuedRequest(
+                        () -> operation.subscribe(sink::next, sink::error, sink::complete),
+                        sink::error
+                )));
     }
 
-    private Mono<Void> checkPodReady() {
-        // TODO add incoming req to queue
+    private boolean isPodAvailable() {
         PodStatus status = gpuLifecycleManager.getStatus();
 
         if (status == PodStatus.READY) {
             gpuLifecycleManager.resetIdleTimer();
-            return Mono.empty();
+            return true;
         }
 
         if (status == PodStatus.DEGRADED) {
-            return Mono.empty();
+            return true;
         }
 
-        if (status == PodStatus.STOPPED || status == PodStatus.STOPPING) {
-            return gpuLifecycleManager.requestStart()
-                    .then(Mono.error(new RuntimeException("OllamaService - GPU pod not ready")));
+        if (status == PodStatus.STOPPED) {
+            gpuLifecycleManager.requestStart().subscribe();
         }
 
-        return Mono.error(new RuntimeException("OllamaService - GPU pod not ready, status=" + status));
+        return false;
+    }
+
+    private QueuedRequest createQueuedRequest(Runnable task, Consumer<Throwable> onFailure) {
+        return new QueuedRequest(
+                UUID.randomUUID().toString(),
+                LocalDateTime.now(),
+                task,
+                onFailure
+        );
     }
 }

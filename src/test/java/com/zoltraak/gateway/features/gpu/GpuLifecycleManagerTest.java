@@ -17,6 +17,7 @@ import reactor.test.StepVerifier;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,17 +29,19 @@ class GpuLifecycleManagerTest {
     @Mock
     private ProviderProperties providerProperties;
 
+    @Mock
+    private RequestQueue requestQueue;
+
     private GpuLifecycleManager gpuLifecycleManager;
 
     @BeforeEach
     void setUp() {
-        when(this.providerProperties.getActive()).thenReturn(GpuProvider.VASTAI);
-
-        gpuLifecycleManager = new GpuLifecycleManager(gpuProviderPort, this.providerProperties);
+        when(providerProperties.getActive()).thenReturn(GpuProvider.VASTAI);
+        gpuLifecycleManager = new GpuLifecycleManager(gpuProviderPort, providerProperties, requestQueue);
     }
 
     @Test
-    void podStatus_returnsStopped_whenGpuLifecycleManagerInitialized() {
+    void initialStatus_isStopped() {
         assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.STOPPED);
     }
 
@@ -47,6 +50,68 @@ class GpuLifecycleManagerTest {
         StepVerifier.create(gpuLifecycleManager.requestShutdown()).verifyComplete();
 
         verify(gpuProviderPort, never()).stop();
+    }
+
+    @Nested
+    class Init {
+
+        @Test
+        void onProviderSuccess_syncsStatus() {
+            when(gpuProviderPort.getStatus()).thenReturn(Mono.just(PodStatus.WARMING));
+
+            gpuLifecycleManager.init();
+
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.WARMING);
+        }
+
+        @Test
+        void onProviderSuccess_whenStatusIsNotStopped_setsTimestamps() {
+            when(gpuProviderPort.getStatus()).thenReturn(Mono.just(PodStatus.WARMING));
+
+            gpuLifecycleManager.init();
+
+            assertThat(gpuLifecycleManager.getSessionStartedAt()).isNotNull();
+            assertThat(gpuLifecycleManager.getLastActivityAt()).isNotNull();
+        }
+
+        @Test
+        void onProviderSuccess_whenStatusIsStopped_doesNotSetTimestamps() {
+            when(gpuProviderPort.getStatus()).thenReturn(Mono.just(PodStatus.STOPPED));
+
+            gpuLifecycleManager.init();
+
+            assertThat(gpuLifecycleManager.getSessionStartedAt()).isNull();
+            assertThat(gpuLifecycleManager.getLastActivityAt()).isNull();
+        }
+
+        @Test
+        void onProviderFailure_retainsStoppedStatus_andDoesNotThrow() {
+            when(gpuProviderPort.getStatus()).thenReturn(Mono.error(new ProviderException(
+                    GpuProvider.VASTAI, 500, "Empty response from Vast.ai")));
+
+            assertThatNoException().isThrownBy(() -> gpuLifecycleManager.init());
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.STOPPED);
+        }
+    }
+
+    @Nested
+    class PodEvents {
+
+        @Test
+        void onPodReady_setsStatusToReady_andNotifiesQueue() {
+            gpuLifecycleManager.onPodReady();
+
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.READY);
+            verify(requestQueue).onPodReady();
+        }
+
+        @Test
+        void onPodDegraded_setsStatusToDegraded_andNotifiesQueue() {
+            gpuLifecycleManager.onPodDegraded();
+
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.DEGRADED);
+            verify(requestQueue).onPodDegraded();
+        }
     }
 
     @Nested
@@ -76,7 +141,7 @@ class GpuLifecycleManagerTest {
         }
 
         @Test
-        void onProviderFailure_rollsBackToPreviousStatus() {
+        void onProviderFailure_rollsBackToPreviousStatus_andNotifiesQueue() {
             when(gpuProviderPort.start()).thenReturn(Mono.error(new ProviderException(
                     GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai")));
 
@@ -85,14 +150,13 @@ class GpuLifecycleManagerTest {
                     .verify();
 
             assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.STOPPED);
+            verify(requestQueue).onPodStartFailed(PodStatus.STOPPED);
         }
 
         @Test
         void whenAlreadyStarting_isNoOpAndDoesNotCallProvider() {
             when(gpuProviderPort.start()).thenReturn(Mono.never());
             gpuLifecycleManager.requestStart().subscribe();
-
-            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.STARTING);
 
             StepVerifier.create(gpuLifecycleManager.requestStart()).verifyComplete();
 
@@ -109,14 +173,35 @@ class GpuLifecycleManagerTest {
             verify(gpuProviderPort, times(1)).start();
             assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.WARMING);
         }
+
+        @Test
+        void whenAlreadyReady_isNoOpAndDoesNotCallProvider() {
+            gpuLifecycleManager.onPodReady();
+
+            StepVerifier.create(gpuLifecycleManager.requestStart()).verifyComplete();
+
+            verify(gpuProviderPort, never()).start();
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.READY);
+        }
+
+        @Test
+        void whenAlreadyDegraded_isNoOpAndDoesNotCallProvider() {
+            gpuLifecycleManager.onPodDegraded();
+
+            StepVerifier.create(gpuLifecycleManager.requestStart()).verifyComplete();
+
+            verify(gpuProviderPort, never()).start();
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.DEGRADED);
+        }
     }
 
     @Nested
     class RequestShutdown {
 
         @BeforeEach
-        void driveToReady() {
+        void driveToWarming() {
             when(gpuProviderPort.start()).thenReturn(Mono.empty());
+            when(requestQueue.isEmpty()).thenReturn(true);
             StepVerifier.create(gpuLifecycleManager.requestStart()).verifyComplete();
         }
 
@@ -156,7 +241,7 @@ class GpuLifecycleManagerTest {
 
         @Test
         void onProviderFailure_rollsBackToPreviousStatus() {
-            PodStatus previousStatus = gpuLifecycleManager.getStatus();
+            PodStatus statusBefore = gpuLifecycleManager.getStatus();
 
             when(gpuProviderPort.stop()).thenReturn(Mono.error(new ProviderException(
                     GpuProvider.VASTAI, 404, "Failed to stop pod")));
@@ -165,7 +250,16 @@ class GpuLifecycleManagerTest {
                     .expectError(ProviderException.class)
                     .verify();
 
-            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(previousStatus);
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(statusBefore);
+        }
+
+        @Test
+        void whenQueueNotEmpty_isNoOpAndDoesNotCallProvider() {
+            when(requestQueue.isEmpty()).thenReturn(false);
+
+            StepVerifier.create(gpuLifecycleManager.requestShutdown()).verifyComplete();
+
+            verify(gpuProviderPort, never()).stop();
         }
     }
 }

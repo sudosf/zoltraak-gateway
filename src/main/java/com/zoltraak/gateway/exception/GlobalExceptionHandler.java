@@ -3,6 +3,7 @@ package com.zoltraak.gateway.exception;
 import com.zoltraak.gateway.adapters.gpu.ProviderException;
 import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
 import com.zoltraak.gateway.domain.exception.GatewayServiceException;
+import com.zoltraak.gateway.domain.exception.PodNotReadyException;
 import com.zoltraak.gateway.domain.response.GatewayResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(GatewayServiceException.class)
     public ResponseEntity<GatewayResponse<Void>> handleServiceException(GatewayServiceException ex) {
         log.error("Service error code={} message={}", ex.getGatewayErrorCode(), ex.getMessage());
+        return ResponseEntity
+                .status(mapToHttpStatus(ex.getGatewayErrorCode()))
+                .body(GatewayResponse.error(ex.getGatewayErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(PodNotReadyException.class)
+    public ResponseEntity<GatewayResponse<Void>> handlePodNotReadyException(PodNotReadyException ex) {
+        log.error("Pod not ready error  code={} status={} message={}", ex.getGatewayErrorCode(), ex.getStatus(), ex.getMessage());
         return ResponseEntity
                 .status(mapToHttpStatus(ex.getGatewayErrorCode()))
                 .body(GatewayResponse.error(ex.getGatewayErrorCode(), ex.getMessage()));

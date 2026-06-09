@@ -36,7 +36,7 @@ public class IdleTimerChecker {
 
             gpuLifecycleManager.requestShutdown().subscribe(
                     null,
-                    error -> log.error("GPU Pod IdleTimeChecker - Failed to shutdown GPU pod: ", error)
+                    error -> log.error("GPU pod failed to shutdown GPU pod: ", error)
             );
         }
     }
