@@ -1,8 +1,8 @@
 services:
   zoltraak-gateway:
-    image: zoltraak-gateway:latest
+    image: ghcr.io/sudosf/zoltraak-gateway:latest
     ports:
       - "8081:8081"
     environment:
-      - VASTAI_API_KEY=${VASTAI_API_KEY}
+      - VAST_AI_API_KEY=${VAST_AI_API_KEY}
     restart: unless-stopped
