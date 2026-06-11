@@ -37,7 +37,9 @@ public class GpuLifecycleManager {
                         podState.setLastActivityAt(LocalDateTime.now());
                     }
                 })
-                .doOnError(e -> log.warn("GPU pod could not sync status on startup, defaulting to STOPPED: {}", e.getMessage()))
+                .doOnError(e -> log.warn(
+                        "GPU pod could not sync status on startup, defaulting to status={}: {}",
+                        PodStatus.STOPPED, e.getMessage()))
                 .onErrorComplete()
                 .subscribe();
     }

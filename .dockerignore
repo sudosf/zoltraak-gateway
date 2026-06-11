@@ -1,0 +1,45 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Git
+.git
+.gitattributes
+
+# GitHub
+.github
+
+# Tests
+src/test
+
+# Documentation
+README.md
+
+# Scripts
+scripts
+
+# Code Quality
+qodana.yaml
+
+# IDE
+.idea
+*.iml
+*.ipr
+*.iws
+.vscode
+.settings
+.project
+.classpath
+.factorypath
+
+# Logs
+*.log
+logs
