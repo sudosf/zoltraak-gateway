@@ -106,6 +106,23 @@ public class GpuLifecycleManager {
         requestQueue.onPodDegraded();
     }
 
+    public void onExternalStateDrift(PodStatus actualStatus) {
+        PodStatus current = podState.getStatus();
+        if (current == actualStatus) return;
+        if (current == PodStatus.READY && actualStatus == PodStatus.WARMING) return;
+
+        log.warn("GPU pod external state drift detected, actual={}, expected={}", actualStatus, current);
+
+        if (actualStatus == PodStatus.WARMING || actualStatus == PodStatus.STARTING) {
+            podState.setStatus(actualStatus);
+            podState.setSessionStartedAt(LocalDateTime.now());
+        } else {
+            podState.setStatus(actualStatus);
+        }
+
+        log.info("GPU pod status updated to {}", actualStatus);
+    }
+
     public PodStatus getStatus() {
         return podState.getStatus();
     }

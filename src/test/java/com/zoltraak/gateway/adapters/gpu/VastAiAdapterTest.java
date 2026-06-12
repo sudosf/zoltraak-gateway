@@ -97,6 +97,19 @@ class VastAiAdapterTest {
                 .setBody(json));
     }
 
+    private void enqueueDestroyedInstanceResponse() {
+        String json = """
+                {
+                    "instances": null
+                }
+                """;
+
+        mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody(json));
+    }
+
     @Nested
     class WhenInitializationFails {
 
@@ -255,14 +268,44 @@ class VastAiAdapterTest {
                     .expectNext(PodStatus.STARTING)
                     .verifyComplete();
         }
+
+        @Test
+        void throwsProviderException_whenInstanceWasDestroyedExternally() {
+            enqueueDestroyedInstanceResponse();
+            mockWebServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setBody("{ \"instances\": [] }")
+                    .setHeader("Content-Type", "application/json"));
+
+            StepVerifier.create(adapter.getStatus())
+                    .expectError(ProviderException.class)
+                    .verify();
+        }
     }
 
     @Nested
     class WhenGettingConnectionDetails {
 
+        @BeforeEach
+        void setUp() {
+            enqueueInstancePage();
+        }
+
         @Test
         void returnsCorrectUrl_whenInstanceIsRunning() {
+            enqueueInstanceResponse("running");
+
+            StepVerifier.create(adapter.getConnectionDetails())
+                    .expectNextMatches(details ->
+                            details.ollamaUrl().equals("http://1.2.3.4:55000"))
+                    .verifyComplete();
+        }
+
+        @Test
+        void recoversViaRefresh_whenInstanceWasDestroyedExternally() {
+            enqueueDestroyedInstanceResponse();
             enqueueInstancePage();
+            enqueueInstanceResponse("running");
 
             StepVerifier.create(adapter.getConnectionDetails())
                     .expectNextMatches(details ->
@@ -272,18 +315,36 @@ class VastAiAdapterTest {
 
         @Test
         void throwsProviderException_whenPortBindingsAreMissing() {
-
             mockWebServer.enqueue(new MockResponse()
                     .setBody("""
-                            {"instances": [{"id": "123", "public_ipaddr": "1.2.3.4"}]}
+                            {
+                                "instances": {
+                                    "id": 12345,
+                                    "actual_status": "running",
+                                    "public_ipaddr": "1.2.3.4"
+                                }
+                            }
                             """)
-                    .addHeader("Content-Type", "application/json")
-            );
+                    .setHeader("Content-Type", "application/json"));
 
             StepVerifier.create(adapter.getConnectionDetails())
                     .expectError(ProviderException.class)
                     .verify();
 
+        }
+
+        @Test
+        void throwsProviderException_whenInstanceWasDestroyedExternally() {
+            enqueueDestroyedInstanceResponse();
+
+            mockWebServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("{ \"instances\": [] }"));
+
+            StepVerifier.create(adapter.getConnectionDetails())
+                    .expectError(ProviderException.class)
+                    .verify();
         }
     }
 }

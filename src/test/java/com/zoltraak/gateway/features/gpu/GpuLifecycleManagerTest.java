@@ -112,6 +112,38 @@ class GpuLifecycleManagerTest {
             assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.DEGRADED);
             verify(requestQueue).onPodDegraded();
         }
+
+        @Nested
+        class ExternalStateDrift {
+
+            @Test
+            void whenActualIsStopped_andCurrentIsReady_resetsToStopped() {
+                gpuLifecycleManager.onPodReady();
+
+                gpuLifecycleManager.onExternalStateDrift(PodStatus.STOPPED);
+
+                assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.STOPPED);
+            }
+
+            @Test
+            void whenActualIsStopped_andCurrentIsWarming_resetsToStopped() {
+                when(gpuProviderPort.start()).thenReturn(Mono.empty());
+                StepVerifier.create(gpuLifecycleManager.requestStart()).verifyComplete();
+
+                gpuLifecycleManager.onExternalStateDrift(PodStatus.STOPPED);
+
+                assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.STOPPED);
+            }
+
+            @Test
+            void whenActualIsWarming_andCurrentIsReady_isNoOp() {
+                gpuLifecycleManager.onPodReady();
+
+                gpuLifecycleManager.onExternalStateDrift(PodStatus.WARMING);
+
+                assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.READY);
+            }
+        }
     }
 
     @Nested
