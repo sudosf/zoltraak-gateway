@@ -3,8 +3,8 @@ package com.zoltraak.gateway.config.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "zoltraak.ollama")
 @Data
+@ConfigurationProperties(prefix = "zoltraak.ollama")
 public class OllamaProperties {
 
     private GpuPodConfig gpuPod;
