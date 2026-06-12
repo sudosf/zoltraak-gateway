@@ -1,0 +1,7 @@
+zoltraak:
+  provider:
+    vastai:
+      api-key: ${VAST_AI_API_KEY}
+  security:
+    open-webui:
+      api-key: ${OPEN_WEB_UI_API_KEY}
