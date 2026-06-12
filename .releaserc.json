@@ -12,15 +12,6 @@
       }
     ],
     [
-      "@semantic-release/git",
-      {
-        "assets": [
-          "pom.xml"
-        ],
-        "message": "chore(release): ${nextRelease.version} [skip ci]"
-      }
-    ],
-    [
       "@semantic-release/github",
       {
         "assets": [
