@@ -4,8 +4,8 @@ import com.zoltraak.gateway.domain.enums.GpuProvider;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "zoltraak.provider")
 @Data
+@ConfigurationProperties(prefix = "zoltraak.provider")
 public class ProviderProperties {
     private GpuProvider active;
     private Integer timeoutSeconds;

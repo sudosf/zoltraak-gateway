@@ -55,14 +55,10 @@ class WarmupPollerTest {
 
         final int warmupTimeoutMinutes = 3;
 
-        @BeforeEach
-        void setUp() {
-            when(gpuProperties.getWarmupTimeoutMinutes()).thenReturn(warmupTimeoutMinutes);
-        }
-
         @ParameterizedTest
         @EnumSource(value = PodStatus.class, names = {"WARMING", "STARTING"})
-        void whenWarmupTimedOut_setsDegraded(PodStatus status) {
+        void andWarmupTimedOut_setsDegraded(PodStatus status) {
+            when(gpuProperties.getWarmupTimeoutMinutes()).thenReturn(warmupTimeoutMinutes);
             when(gpuLifecycleManager.getStatus()).thenReturn(status);
             when(gpuLifecycleManager.getSessionStartedAt())
                     .thenReturn(LocalDateTime.now().minusMinutes(warmupTimeoutMinutes));
@@ -73,11 +69,22 @@ class WarmupPollerTest {
             verifyNoInteractions(ollamaPort);
         }
 
+        @Test
+        void skipsCheck_whenSessionStartedAtIsNull() {
+            when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.STARTING);
+            when(gpuLifecycleManager.getSessionStartedAt()).thenReturn(null);
+
+            poller.poll();
+
+            verifyNoInteractions(ollamaPort);
+        }
+
         @Nested
         class WithinWarmupTimeout {
 
             @BeforeEach
             void setUp() {
+                when(gpuProperties.getWarmupTimeoutMinutes()).thenReturn(warmupTimeoutMinutes);
                 when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.WARMING);
                 when(gpuLifecycleManager.getSessionStartedAt())
                         .thenReturn(LocalDateTime.now().minusMinutes(warmupTimeoutMinutes - 1));

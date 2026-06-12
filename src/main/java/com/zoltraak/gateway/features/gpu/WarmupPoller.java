@@ -30,8 +30,11 @@ public class WarmupPoller {
         PodStatus status = gpuLifecycleManager.getStatus();
         if (status != PodStatus.WARMING && status != PodStatus.STARTING) return;
 
+        LocalDateTime lastSessionStartedAt = gpuLifecycleManager.getSessionStartedAt();
+        if (lastSessionStartedAt == null) return;
+
         LocalDateTime now = LocalDateTime.now();
-        long minutesElapsed = ChronoUnit.MINUTES.between(gpuLifecycleManager.getSessionStartedAt(), now);
+        long minutesElapsed = ChronoUnit.MINUTES.between(lastSessionStartedAt, now);
 
         if (minutesElapsed >= gpuProperties.getWarmupTimeoutMinutes()) {
             log.warn("GPU pod warmup timed out after {}m, status={}", minutesElapsed, PodStatus.DEGRADED);

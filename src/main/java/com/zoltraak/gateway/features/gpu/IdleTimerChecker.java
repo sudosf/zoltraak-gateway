@@ -24,12 +24,13 @@ public class IdleTimerChecker {
     @Scheduled(fixedDelayString = "${zoltraak.gpu.idle-check-interval-seconds}s")
     void check() {
         PodStatus status = gpuLifecycleManager.getStatus();
-        if (status == PodStatus.STOPPED || status == PodStatus.STOPPING) {
-            return;
-        }
+        if (status == PodStatus.STOPPED || status == PodStatus.STOPPING) return;
+
+        LocalDateTime lastActivityAt = gpuLifecycleManager.getLastActivityAt();
+        if (lastActivityAt == null) return;
 
         LocalDateTime now = LocalDateTime.now();
-        long minutesElapsed = ChronoUnit.MINUTES.between(gpuLifecycleManager.getLastActivityAt(), now);
+        long minutesElapsed = ChronoUnit.MINUTES.between(lastActivityAt, now);
 
         if (minutesElapsed >= gpuProperties.getIdleTimeoutMinutes()) {
             log.info("GPU pod idle for {}m, threshold {}m, requesting shutdown", minutesElapsed, gpuProperties.getIdleTimeoutMinutes());

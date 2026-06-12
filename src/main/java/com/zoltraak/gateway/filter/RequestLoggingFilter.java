@@ -12,8 +12,8 @@ import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
 
 @Slf4j
-@NullMarked
 @Component
+@NullMarked
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestLoggingFilter implements WebFilter {
 

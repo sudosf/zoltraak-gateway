@@ -1,14 +1,12 @@
 services:
   zoltraak-gateway:
-    image: ghcr.io/sudosf/zoltraak-gateway:latest
+    image: ghcr.io/sudosf/zoltraak-gateway:dev
     ports:
       - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - VAST_AI_API_KEY=${VAST_AI_API_KEY}
-      - OPEN_WEB_UI_API_KEY=${OPEN_WEB_UI_API_KEY}
+      - SPRING_PROFILES_ACTIVE=dev
+      - VAST_AI_API_KEY_DEV=${VAST_AI_API_KEY_DEV}
     restart: unless-stopped
-    stop_grace_period: 35s
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
 
