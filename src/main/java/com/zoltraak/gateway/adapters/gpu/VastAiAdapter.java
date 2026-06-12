@@ -26,7 +26,7 @@ public class VastAiAdapter implements GpuProviderPort {
 
     private final WebClient webClient;
     private final OllamaProperties ollamaProperties;
-    private Mono<VastAiInstance> instanceMetadata;
+    private Mono<Long> instanceId;
 
     public VastAiAdapter(@Qualifier("providerWebClient") WebClient webClient, OllamaProperties ollamaProperties) {
         this.webClient = webClient;
@@ -35,16 +35,7 @@ public class VastAiAdapter implements GpuProviderPort {
 
     @PostConstruct
     void init() {
-        this.instanceMetadata = fetchInstances()
-                .flatMapIterable(VastAiInstancePage::instances)
-                .next()
-                .switchIfEmpty(Mono.error(new ProviderException(
-                        GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai")))
-                .cache(
-                        instance -> instance.getPorts() != null ? Duration.ofDays(365) : Duration.ZERO,
-                        _ -> Duration.ZERO,
-                        () -> Duration.ZERO
-                );
+        this.instanceId = getInstanceId();
     }
 
     @Override
@@ -59,11 +50,8 @@ public class VastAiAdapter implements GpuProviderPort {
 
     @Override
     public Mono<PodStatus> getStatus() {
-        return instanceMetadata
-                .flatMap(metadata -> fetchInstance(metadata.getId()))
-                .switchIfEmpty(Mono.error(new ProviderException(
-                        GpuProvider.VASTAI, 500, "Empty response from Vast.ai")))
-                .map(instance -> switch (instance.instances().getActualStatus()) {
+        return resolveInstance()
+                .map(response -> switch (response.instances().getActualStatus()) {
                     case "running", "loading" -> PodStatus.WARMING;
                     case null -> PodStatus.STARTING;
                     default -> PodStatus.STOPPED;
@@ -72,9 +60,8 @@ public class VastAiAdapter implements GpuProviderPort {
 
     @Override
     public Mono<PodConnectionDetails> getConnectionDetails() {
-        return instanceMetadata
-                .switchIfEmpty(Mono.error(new ProviderException(
-                        GpuProvider.VASTAI, 500, "Empty response from Vast.ai")))
+        return resolveInstance()
+                .map(VastAiInstanceResponse::instances)
                 .map(instance -> {
                     String ipAddress = instance.getPublicIpaddr();
                     String ollamaInstancePort = getOllamaInstancePort(instance);
@@ -86,19 +73,51 @@ public class VastAiAdapter implements GpuProviderPort {
     }
 
     private Mono<Void> changeState(String state) {
-        return instanceMetadata.flatMap(instance -> {
-                    log.info("Vast.ai [{}] instance={}", state, instance.getId());
+        return instanceId.flatMap(id -> {
+                    log.info("Vast.ai [{}] instance={}", state, id);
                     return webClient.put()
-                            .uri("/api/v0/instances/%s".formatted(instance.getId()))
+                            .uri("/api/v0/instances/%s".formatted(id))
                             .bodyValue(new VastAiManageRequest(state))
                             .retrieve()
                             .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
                                     handleErrorResponse())
                             .bodyToMono(Void.class)
-                            .doOnSuccess(_ -> log.debug("Vast.ai [{}] completed instance={}", state, instance.getId()))
-                            .doOnError(e -> log.warn("Vast.ai [{}] failed instance={}: {}", state, instance.getId(), e.getMessage()));
+                            .doOnSuccess(_ -> log.debug("Vast.ai [{}] completed instance={}", state, id))
+                            .doOnError(e -> log.warn("Vast.ai [{}] failed instance={}: {}", state, id, e.getMessage()));
                 }
         );
+    }
+
+    private Mono<VastAiInstanceResponse> resolveInstance() {
+        return instanceId
+                .flatMap(this::fetchInstance)
+                .flatMap(response -> {
+                    if (response.instances() != null) return Mono.just(response);
+
+                    log.warn("Vast.ai instance id not found, refreshing cache");
+
+                    this.instanceId = getInstanceId();
+                    return this.instanceId
+                            .flatMap(this::fetchInstance)
+                            .filter(res -> res.instances() != null)
+                            .switchIfEmpty(Mono.error(new ProviderException(
+                                    GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai"))
+                            );
+                });
+    }
+
+    private Mono<Long> getInstanceId() {
+        return fetchInstances()
+                .flatMapIterable(VastAiInstancePage::instances)
+                .next()
+                .map(VastAiInstance::getId)
+                .switchIfEmpty(Mono.error(new ProviderException(
+                        GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai")))
+                .cache(
+                        _ -> Duration.ofHours(3),
+                        _ -> Duration.ZERO,
+                        () -> Duration.ZERO
+                );
     }
 
     private String getOllamaInstancePort(VastAiInstance instance) {
