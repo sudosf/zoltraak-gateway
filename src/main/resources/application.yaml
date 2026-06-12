@@ -33,6 +33,7 @@ zoltraak:
     warmup-timeout-minutes: 3
     idle-check-interval-seconds: 30
     warmup-poll-interval-seconds: 5
+    reconciler-poll-interval-seconds: 30
 
   queue:
     max-wait-minutes: 5

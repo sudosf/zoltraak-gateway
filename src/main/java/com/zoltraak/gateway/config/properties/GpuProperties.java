@@ -10,4 +10,5 @@ public class GpuProperties {
     private Integer warmupTimeoutMinutes;
     private Integer warmupPollIntervalSeconds;
     private Integer idleCheckIntervalSeconds;
+    private Integer reconcilerPollIntervalSeconds;
 }
