@@ -6,6 +6,7 @@ import com.zoltraak.gateway.domain.models.ollama.*;
 import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
 import com.zoltraak.gateway.features.gpu.QueuedRequest;
 import com.zoltraak.gateway.features.gpu.RequestQueue;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+@Slf4j
 @Service
 public class OllamaProxyService {
 
@@ -80,7 +82,9 @@ public class OllamaProxyService {
         }
 
         if (status == PodStatus.STOPPED) {
-            gpuLifecycleManager.requestStart().subscribe();
+            gpuLifecycleManager.requestStart()
+                    .doOnError(e -> log.debug("GPU pod failed to start: ", e))
+                    .subscribe();
         }
 
         return false;
