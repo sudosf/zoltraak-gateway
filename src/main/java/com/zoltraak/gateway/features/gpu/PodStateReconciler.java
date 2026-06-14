@@ -19,7 +19,8 @@ public class PodStateReconciler {
         this.gpuLifecycleManager = gpuLifecycleManager;
     }
 
-    @Scheduled(fixedDelayString = "${zoltraak.gpu.reconciler-poll-interval-seconds}s")
+    @Scheduled(fixedDelayString = "${zoltraak.gpu.reconciler-poll-interval-seconds}s",
+            initialDelayString = "${zoltraak.gpu.reconciler-poll-initial-delay-seconds}s")
     void reconcile() {
         log.debug("Reconciling GPU pod state");
 

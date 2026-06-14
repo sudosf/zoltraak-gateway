@@ -32,8 +32,8 @@ public class IdleTimerChecker {
         LocalDateTime now = LocalDateTime.now();
         long minutesElapsed = ChronoUnit.MINUTES.between(lastActivityAt, now);
 
-        if (minutesElapsed >= gpuProperties.getIdleTimeoutMinutes()) {
-            log.info("GPU pod idle for {}m, threshold {}m, requesting shutdown", minutesElapsed, gpuProperties.getIdleTimeoutMinutes());
+        if (minutesElapsed >= gpuProperties.getIdleCheckTimeoutMinutes()) {
+            log.info("GPU pod idle for {}m, threshold {}m, requesting shutdown", minutesElapsed, gpuProperties.getIdleCheckTimeoutMinutes());
 
             gpuLifecycleManager.requestShutdown().subscribe(
                     null,
