@@ -25,7 +25,8 @@ public class WarmupPoller {
         this.gpuProperties = gpuProperties;
     }
 
-    @Scheduled(fixedDelayString = "${zoltraak.gpu.warmup-poll-interval-seconds}s")
+    @Scheduled(fixedDelayString = "${zoltraak.gpu.warmup-poll-interval-seconds}s",
+            initialDelayString = "${zoltraak.gpu.warmup-poll-initial-delay-seconds}s")
     void poll() {
         PodStatus status = gpuLifecycleManager.getStatus();
         if (status != PodStatus.WARMING && status != PodStatus.STARTING) return;

@@ -28,11 +28,13 @@ zoltraak:
       timeout-seconds: 15
 
   gpu:
-    idle-timeout-minutes: 15
-    warmup-timeout-minutes: 3
+    idle-check-timeout-minutes: 15
     idle-check-interval-seconds: 30
+    warmup-timeout-minutes: 3
     warmup-poll-interval-seconds: 5
-    reconciler-poll-interval-seconds: 30
+    warmup-poll-initial-delay-seconds: 5
+    reconciler-poll-interval-seconds: 60
+    reconciler-poll-initial-delay-seconds: 10
 
   queue:
     max-wait-minutes: 5

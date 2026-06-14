@@ -65,7 +65,7 @@ class IdleTimerCheckerTest {
         @BeforeEach
         void setUp() {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.READY);
-            when(gpuProperties.getIdleTimeoutMinutes()).thenReturn(idleTimeoutMinutes);
+            when(gpuProperties.getIdleCheckTimeoutMinutes()).thenReturn(idleTimeoutMinutes);
         }
 
         @Test

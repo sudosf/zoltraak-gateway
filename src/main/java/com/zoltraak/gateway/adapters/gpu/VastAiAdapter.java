@@ -9,7 +9,6 @@ import com.zoltraak.gateway.domain.models.provider.PodConnectionDetails;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
@@ -21,7 +20,6 @@ import java.util.function.Function;
 
 @Slf4j
 @Adapter
-@ConditionalOnProperty(name = "zoltraak.provider.active", havingValue = "vastai")
 public class VastAiAdapter implements GpuProviderPort {
 
     private final WebClient webClient;

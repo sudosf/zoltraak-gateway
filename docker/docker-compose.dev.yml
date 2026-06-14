@@ -1,18 +1,10 @@
 services:
   zoltraak-gateway:
     image: ghcr.io/sudosf/zoltraak-gateway:dev
+    container_name: zoltraak-gateway-dev
     ports:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - VAST_AI_API_KEY_DEV=${VAST_AI_API_KEY_DEV}
-    restart: unless-stopped
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 --label-enable
     restart: unless-stopped

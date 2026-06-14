@@ -1,6 +1,7 @@
 services:
   zoltraak-gateway:
     image: ghcr.io/sudosf/zoltraak-gateway:latest
+    container_name: zoltraak-gateway
     ports:
       - "8081:8081"
     environment:
@@ -9,12 +10,3 @@ services:
       - OPEN_WEB_UI_API_KEY=${OPEN_WEB_UI_API_KEY}
     restart: unless-stopped
     stop_grace_period: 35s
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-
-  watchtower:
-    image: containrrr/watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --interval 300 --label-enable
-    restart: unless-stopped

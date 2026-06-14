@@ -31,14 +31,10 @@ public class GpuLifecycleManager {
         gpuProviderPort.getStatus()
                 .doOnSuccess(status -> {
                     log.info("GPU pod startup status: {}", status);
-                    podState.setStatus(status);
-                    if (status != PodStatus.STOPPED) {
-                        podState.setSessionStartedAt(LocalDateTime.now());
-                        podState.setLastActivityAt(LocalDateTime.now());
-                    }
+                    onExternalStateDrift(status);
                 })
                 .doOnError(e -> log.warn(
-                        "GPU pod could not sync status on startup, defaulting to status={}: {}",
+                        "GPU pod could not sync status on startup, defaulting to status={}, error={}",
                         PodStatus.STOPPED, e.getMessage()))
                 .onErrorComplete()
                 .subscribe();
@@ -106,21 +102,22 @@ public class GpuLifecycleManager {
         requestQueue.onPodDegraded();
     }
 
-    public void onExternalStateDrift(PodStatus actualStatus) {
-        PodStatus current = podState.getStatus();
-        if (current == actualStatus) return;
-        if (current == PodStatus.READY && actualStatus == PodStatus.WARMING) return;
+    public void onExternalStateDrift(PodStatus externalStatus) {
+        PodStatus currentStatus = podState.getStatus();
+        if (currentStatus == externalStatus) return;
+        if (currentStatus == PodStatus.READY && externalStatus == PodStatus.WARMING) return;
 
-        log.warn("GPU pod external state drift detected, actual={}, expected={}", actualStatus, current);
+        log.warn("GPU pod external state drift detected, external={}, current={}", externalStatus, currentStatus);
 
-        if (actualStatus == PodStatus.WARMING || actualStatus == PodStatus.STARTING) {
-            podState.setStatus(actualStatus);
+        if (externalStatus == PodStatus.WARMING || externalStatus == PodStatus.STARTING) {
+            podState.setStatus(externalStatus);
             podState.setSessionStartedAt(LocalDateTime.now());
+            podState.setLastActivityAt(LocalDateTime.now());
         } else {
-            podState.setStatus(actualStatus);
+            podState.setStatus(externalStatus);
         }
 
-        log.info("GPU pod status updated to {}", actualStatus);
+        log.info("GPU pod status updated to {}", externalStatus);
     }
 
     public PodStatus getStatus() {
