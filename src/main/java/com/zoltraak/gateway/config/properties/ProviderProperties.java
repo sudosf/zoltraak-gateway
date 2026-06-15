@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "zoltraak.provider")
 public class ProviderProperties {
     private GpuProvider active;
-    private Integer timeoutSeconds;
+    private Integer responseTimeoutSeconds;
     private RunPodConfig runPod;
     private VastAiConfig vastAi;
 
