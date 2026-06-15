@@ -11,7 +11,7 @@ server:
 zoltraak:
   provider:
     active: vastai
-    timeout-seconds: 30
+    response-timeout-seconds: 30
     vastai:
       base-url: https://console.vast.ai
     runpod:
