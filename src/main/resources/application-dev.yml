@@ -2,7 +2,8 @@ zoltraak:
   provider:
     vastai:
       api-key: ${VAST_AI_API_KEY_DEV}
-
+    runpod:
+      api-key: ${RUNPOD_API_KEY_DEV}
 logging:
   level:
     com.zoltraak: DEBUG
