@@ -1,9 +1,11 @@
-package com.zoltraak.gateway.features.gpu;
+package com.zoltraak.gateway.features.gpu.process;
 
 import com.zoltraak.gateway.adapters.ollama.OllamaPort;
 import com.zoltraak.gateway.annotations.BackgroundProcess;
 import com.zoltraak.gateway.config.properties.GpuProperties;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.exception.ExceptionUtils;
+import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -38,7 +40,7 @@ public class WarmupPoller {
         long minutesElapsed = ChronoUnit.MINUTES.between(lastSessionStartedAt, now);
 
         if (minutesElapsed >= gpuProperties.getWarmupTimeoutMinutes()) {
-            log.warn("GPU pod warmup timed out after {}m, status={}", minutesElapsed, PodStatus.DEGRADED);
+            log.warn("GPU pod warmup timed out after {}m, status = {}", minutesElapsed, PodStatus.DEGRADED);
             gpuLifecycleManager.onPodDegraded();
             return;
         }
@@ -46,13 +48,13 @@ public class WarmupPoller {
         ollamaPort.isHealthy().subscribe(
                 healthy -> {
                     if (healthy) {
-                        log.info("GPU pod healthy after {}m, status={}", minutesElapsed, PodStatus.READY);
+                        log.info("GPU pod healthy after {}m, status = {}", minutesElapsed, PodStatus.READY);
                         gpuLifecycleManager.onPodReady();
                     }
                 },
                 error -> {
                     if (minutesElapsed > lastErrorLoggedMinute) {
-                        log.warn("GPU pod health check failed: {}", error.getMessage());
+                        log.warn("GPU pod health check failed: {}", ExceptionUtils.getRootCauseMessage(error));
                         lastErrorLoggedMinute = minutesElapsed;
                     }
                 }

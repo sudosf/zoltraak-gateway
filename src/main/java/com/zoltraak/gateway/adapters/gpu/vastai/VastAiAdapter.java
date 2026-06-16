@@ -1,11 +1,15 @@
-package com.zoltraak.gateway.adapters.gpu;
+package com.zoltraak.gateway.adapters.gpu.vastai;
 
-import com.zoltraak.gateway.adapters.gpu.model.*;
+import com.zoltraak.gateway.adapters.gpu.GpuProvider;
+import com.zoltraak.gateway.adapters.gpu.ProviderException;
+import com.zoltraak.gateway.adapters.gpu.vastai.model.*;
 import com.zoltraak.gateway.annotations.Adapter;
 import com.zoltraak.gateway.config.properties.OllamaProperties;
-import com.zoltraak.gateway.domain.enums.GpuProvider;
+import com.zoltraak.gateway.config.properties.ProviderProperties;
+import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.models.provider.PodConnectionDetails;
+import com.zoltraak.gateway.exception.ExceptionUtils;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,15 +24,20 @@ import java.util.function.Function;
 
 @Slf4j
 @Adapter
-public class VastAiAdapter implements GpuProviderPort {
+public class VastAiAdapter implements GpuProvider {
 
     private final WebClient webClient;
     private final OllamaProperties ollamaProperties;
+    private final ProviderProperties providerProperties;
     private Mono<Long> instanceId;
 
-    public VastAiAdapter(@Qualifier("providerWebClient") WebClient webClient, OllamaProperties ollamaProperties) {
+    public VastAiAdapter(
+            @Qualifier("vastaiWebClient") WebClient webClient,
+            OllamaProperties ollamaProperties,
+            ProviderProperties providerProperties) {
         this.webClient = webClient;
         this.ollamaProperties = ollamaProperties;
+        this.providerProperties = providerProperties;
     }
 
     @PostConstruct
@@ -65,14 +74,14 @@ public class VastAiAdapter implements GpuProviderPort {
                     String ollamaInstancePort = getOllamaInstancePort(instance);
                     String ollamaUrl = "http://%s:%s".formatted(ipAddress, ollamaInstancePort);
 
-                    log.debug("Vast.ai resolved ollama url={}", ollamaUrl);
+                    log.debug("Vast.ai resolved ollama url = {}", ollamaUrl);
                     return new PodConnectionDetails(ollamaUrl, null);
                 });
     }
 
     private Mono<Void> changeState(String state) {
         return instanceId.flatMap(id -> {
-                    log.info("Vast.ai [{}] instance={}", state, id);
+            log.info("Vast.ai [{}] instance = {}", state, id);
                     return webClient.put()
                             .uri("/api/v0/instances/%s".formatted(id))
                             .bodyValue(new VastAiManageRequest(state))
@@ -80,8 +89,10 @@ public class VastAiAdapter implements GpuProviderPort {
                             .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
                                     handleErrorResponse())
                             .bodyToMono(Void.class)
-                            .doOnSuccess(_ -> log.debug("Vast.ai [{}] completed instance={}", state, id))
-                            .doOnError(e -> log.warn("Vast.ai [{}] failed instance={}: {}", state, id, e.getMessage()));
+                            .doOnSuccess(_ -> log.debug("Vast.ai [{}] completed instance = {}", state, id))
+                            .doOnError(e -> log.warn("Vast.ai [{}] failed instance = {}: {}",
+                                    state, id, ExceptionUtils.getRootCauseMessage(e))
+                            );
                 }
         );
     }
@@ -99,7 +110,7 @@ public class VastAiAdapter implements GpuProviderPort {
                             .flatMap(this::fetchInstance)
                             .filter(res -> res.instances() != null)
                             .switchIfEmpty(Mono.error(new ProviderException(
-                                    GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai"))
+                                    GpuProviderType.VASTAI, 404, "No active GPU instances found on Vast.ai"))
                             );
                 });
     }
@@ -110,9 +121,9 @@ public class VastAiAdapter implements GpuProviderPort {
                 .next()
                 .map(VastAiInstance::getId)
                 .switchIfEmpty(Mono.error(new ProviderException(
-                        GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai")))
+                        GpuProviderType.VASTAI, 404, "No active GPU instances found on Vast.ai")))
                 .cache(
-                        _ -> Duration.ofHours(3),
+                        _ -> Duration.ofHours(providerProperties.getIdCacheHours()),
                         _ -> Duration.ZERO,
                         () -> Duration.ZERO
                 );
@@ -123,7 +134,7 @@ public class VastAiAdapter implements GpuProviderPort {
 
         Map<String, List<VastAiPortBinding>> ports = instance.getPorts();
         if (ports == null) {
-            throw new ProviderException(GpuProvider.VASTAI, 503, "Port bindings not yet available");
+            throw new ProviderException(GpuProviderType.VASTAI, 503, "Port bindings not yet available");
         }
 
         List<VastAiPortBinding> portBindings = ports.get(ollamaInternalPort + "/tcp");
@@ -146,15 +157,17 @@ public class VastAiAdapter implements GpuProviderPort {
                 .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
                         handleErrorResponse())
                 .bodyToMono(responseType)
-                .doOnSubscribe(_ -> log.debug("Vast.ai GET {}", path))
-                .doOnError(e -> log.warn("Vast.ai GET {} failed: {}", path, e.getMessage()));
+                .doOnSubscribe(_ -> log.debug("Vast.ai GET path = {}", path))
+                .doOnError(e -> log.warn("Vast.ai GET failed, path = {} error = {}",
+                        path, ExceptionUtils.getRootCauseMessage(e))
+                );
     }
 
     private Function<ClientResponse, Mono<? extends Throwable>> handleErrorResponse() {
         return response -> response.bodyToMono(String.class)
                 .defaultIfEmpty("No response body")
                 .map(body -> new ProviderException(
-                        GpuProvider.VASTAI,
+                        GpuProviderType.VASTAI,
                         response.statusCode().value(),
                         body));
     }
