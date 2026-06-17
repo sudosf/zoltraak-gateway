@@ -2,6 +2,7 @@ package com.zoltraak.gateway.features.gpu;
 
 import com.zoltraak.gateway.adapters.gpu.GpuProvider;
 import com.zoltraak.gateway.config.properties.ProviderProperties;
+import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.exception.ExceptionUtils;
 import com.zoltraak.gateway.features.gpu.model.ProviderRequest;
@@ -25,7 +26,6 @@ public class GpuLifecycleManager {
         this.gpuProvider = gpuProvider;
         this.podState = new PodState();
         this.podState.setStatus(PodStatus.STOPPED);
-        this.podState.setProvider(providerProperties.getActive());
         this.requestQueue = requestQueue;
         this.providerProperties = providerProperties;
     }
@@ -99,9 +99,9 @@ public class GpuLifecycleManager {
     }
 
     public void switchProvider(ProviderRequest request) {
-        log.info("GPU provider switch requested, from {} to {}", podState.getProvider(), request.provider());
+        GpuProviderType currentProvider = this.providerProperties.getActive();
+        log.info("GPU provider switch requested, from {} to {}", currentProvider, request.provider());
         this.providerProperties.setActive(request.provider());
-        podState.setProvider(request.provider());
     }
 
     public void onPodReady() {

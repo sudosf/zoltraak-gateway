@@ -1,7 +1,9 @@
 package com.zoltraak.gateway.features.gpu;
 
 import com.zoltraak.gateway.config.SecurityConfig;
+import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.features.gpu.model.ProviderRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
@@ -59,5 +61,19 @@ class GpuControllerTest {
                 .expectBody();
 
         verify(gpuLifecycleManager).requestShutdown();
+    }
+
+    @Test
+    void switchProvider_delegatesToLifecycleManager_andReturns200() {
+        ProviderRequest request = new ProviderRequest(GpuProviderType.RUNPOD);
+
+        webTestClient.post()
+                .uri(GpuController.BASE_PATH + GpuController.PROVIDER)
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody();
+
+        verify(gpuLifecycleManager).switchProvider(request);
     }
 }

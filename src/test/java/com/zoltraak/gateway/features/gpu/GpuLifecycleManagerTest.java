@@ -5,6 +5,7 @@ import com.zoltraak.gateway.adapters.gpu.ProviderException;
 import com.zoltraak.gateway.config.properties.ProviderProperties;
 import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.features.gpu.model.ProviderRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,16 +28,16 @@ class GpuLifecycleManagerTest {
     private GpuProvider gpuProvider;
 
     @Mock
-    private ProviderProperties providerProperties;
-
-    @Mock
     private RequestQueue requestQueue;
 
+    private ProviderProperties providerProperties;
     private GpuLifecycleManager gpuLifecycleManager;
 
     @BeforeEach
     void setUp() {
-        when(providerProperties.getActive()).thenReturn(GpuProviderType.VASTAI);
+        providerProperties = mock(ProviderProperties.class);
+        providerProperties.setIdCacheHours(1);
+
         gpuLifecycleManager = new GpuLifecycleManager(gpuProvider, providerProperties, requestQueue);
     }
 
@@ -292,6 +293,19 @@ class GpuLifecycleManagerTest {
             StepVerifier.create(gpuLifecycleManager.requestShutdown()).verifyComplete();
 
             verify(gpuProvider, never()).stop();
+        }
+    }
+
+    @Nested
+    class SwitchProvider {
+
+        @Test
+        void updatesActiveProviderProperty() {
+            ProviderRequest request = new ProviderRequest(GpuProviderType.RUNPOD);
+
+            gpuLifecycleManager.switchProvider(request);
+
+            verify(providerProperties).setActive(GpuProviderType.RUNPOD);
         }
     }
 }
