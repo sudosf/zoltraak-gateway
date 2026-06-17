@@ -65,7 +65,7 @@ public class GpuLifecycleManager {
                     log.info("GPU pod started, status = {}", PodStatus.WARMING);
                 })
                 .doOnError(ex -> {
-                    log.warn("GPU pod start failed, rolling back status = {}, message = {}", current, ExceptionUtils.getRootCauseMessage(ex));
+                    log.debug("GPU pod start failed, rolling back status = {}, message = {}", current, ExceptionUtils.getRootCauseMessage(ex));
                     podState.setStatus(current);
                     requestQueue.onPodStartFailed(current);
                 });

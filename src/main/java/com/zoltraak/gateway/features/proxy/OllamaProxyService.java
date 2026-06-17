@@ -84,8 +84,11 @@ public class OllamaProxyService {
 
         if (status == PodStatus.STOPPED) {
             gpuLifecycleManager.requestStart()
-                    .doOnError(ex -> log.debug("GPU pod failed to start, message = {}", ExceptionUtils.getRootCauseMessage(ex)))
-                    .subscribe();
+                    .subscribe(null,
+                            ex -> log.warn(
+                                    "GPU pod failed to start, message = {}",
+                                    ExceptionUtils.getRootCauseMessage(ex)
+                            ));
         }
 
         return false;

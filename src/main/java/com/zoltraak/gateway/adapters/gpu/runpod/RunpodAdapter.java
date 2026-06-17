@@ -53,7 +53,7 @@ public class RunpodAdapter implements GpuProvider {
                     return postAsMono(path)
                             .doOnSuccess(_ -> log.debug("Runpod start completed for pod with id = {}", id))
                             .doOnError(e ->
-                                    log.warn("Runpod start failed for pod with id = {}, error = {}",
+                                    log.debug("Runpod start failed for pod with id = {}, error = {}",
                                             id, ExceptionUtils.getRootCauseMessage(e))
                             );
                 });
@@ -68,7 +68,7 @@ public class RunpodAdapter implements GpuProvider {
                     return postAsMono(path)
                             .doOnSuccess(_ -> log.debug("Runpod stop completed for pod with id = {}", id))
                             .doOnError(e ->
-                                    log.warn("Runpod stop failed for pod with id = {}, error = {}",
+                                    log.debug("Runpod stop failed for pod with id = {}, error = {}",
                                             id, ExceptionUtils.getRootCauseMessage(e))
                             );
                 });
@@ -120,7 +120,7 @@ public class RunpodAdapter implements GpuProvider {
                         handleErrorResponse())
                 .bodyToMono(RunpodPodResponse.class)
                 .doOnSubscribe(_ -> log.debug("Runpod GET fetching pod by id = {}", id))
-                .doOnError(e -> log.warn("Runpod GET failed, id = {}, error = {}",
+                .doOnError(e -> log.debug("Runpod GET failed, id = {}, error = {}",
                         id, ExceptionUtils.getRootCauseMessage(e))
                 );
     }
