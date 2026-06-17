@@ -48,8 +48,12 @@ public class ProviderRegistry implements GpuProvider {
 
     private GpuProvider activeProvider() {
         GpuProviderType activeProvider = providerProperties.getActive();
-        GpuProvider providerPort = providers.get(activeProvider);
+        if (activeProvider == null) {
+            log.error("No active provider configured");
+            throw new ProviderException(null, 404, "No active provider configured");
+        }
 
+        GpuProvider providerPort = providers.get(activeProvider);
         if (providerPort == null) {
             log.error("No adapter registered for provider {}", activeProvider);
             throw new ProviderException(activeProvider, 404, "No adapter registered for provider");
