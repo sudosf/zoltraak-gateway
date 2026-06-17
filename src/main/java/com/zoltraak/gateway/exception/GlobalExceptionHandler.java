@@ -10,6 +10,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.server.ServerWebInputException;
+
+import java.util.Objects;
+
 
 @Slf4j
 @RestControllerAdvice
@@ -17,7 +23,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProviderException.class)
     public ResponseEntity<GatewayResponse<Void>> handleProviderException(ProviderException ex) {
-        log.error("Provider error code={} message={}", ex.getHttpStatusCode(), ex.getMessage());
+        log.error("GPU provider error code = {} message = {}", ex.getHttpStatusCode(), ExceptionUtils.getRootCauseMessage(ex));
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(GatewayResponse.error(
@@ -27,7 +33,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GatewayServiceException.class)
     public ResponseEntity<GatewayResponse<Void>> handleServiceException(GatewayServiceException ex) {
-        log.error("Service error code={} message={}", ex.getGatewayErrorCode(), ex.getMessage());
+        log.error("Gateway service error code = {} message = {}", ex.getGatewayErrorCode(), ExceptionUtils.getRootCauseMessage(ex));
         return ResponseEntity
                 .status(mapToHttpStatus(ex.getGatewayErrorCode()))
                 .body(GatewayResponse.error(ex.getGatewayErrorCode(), ex.getMessage()));
@@ -35,15 +41,50 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(PodNotReadyException.class)
     public ResponseEntity<GatewayResponse<Void>> handlePodNotReadyException(PodNotReadyException ex) {
-        log.error("Pod not ready error  code={} status={} message={}", ex.getGatewayErrorCode(), ex.getStatus(), ex.getMessage());
+        log.error("Pod not ready error code = {} status = {} message = {}",
+                ex.getGatewayErrorCode(), ex.getStatus(), ExceptionUtils.getRootCauseMessage(ex)
+        );
         return ResponseEntity
                 .status(mapToHttpStatus(ex.getGatewayErrorCode()))
                 .body(GatewayResponse.error(ex.getGatewayErrorCode(), ex.getMessage()));
     }
 
+    @ExceptionHandler(ServerWebInputException.class)
+    public ResponseEntity<GatewayResponse<Void>> handleBadRequest(ServerWebInputException ex) {
+        log.error("Invalid request payload, message = {}", ExceptionUtils.getRootCauseMessage(ex));
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(GatewayResponse.error(GatewayErrorCode.BAD_REQUEST, ex.getMessage()));
+    }
+
+    @ExceptionHandler(WebExchangeBindException.class)
+    public ResponseEntity<GatewayResponse<Void>> handleValidationException(WebExchangeBindException ex) {
+        log.error("Validation error, message = {}", ExceptionUtils.getRootCauseMessage(ex));
+
+        String field = Objects.requireNonNull(ex.getBindingResult().getFieldError()).getField();
+        String error = ex.getBindingResult().getFieldError().getDefaultMessage();
+        String message = String.format("Validation failed for field '%s': %s", field, error);
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(GatewayResponse.error(GatewayErrorCode.BAD_REQUEST, message));
+    }
+
+    @ExceptionHandler(WebClientRequestException.class)
+    public ResponseEntity<GatewayResponse<Void>> handleWebClientRequestException(WebClientRequestException ex) {
+        log.error("Network error, message = {}", ExceptionUtils.getRootCauseMessage(ex));
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(GatewayResponse.error(
+                                GatewayErrorCode.NETWORK_UNREACHABLE,
+                                "Connection failed, remote service is offline or unreachable."
+                        )
+                );
+    }
+
     @ExceptionHandler(Throwable.class)
     public ResponseEntity<GatewayResponse<Void>> handleThrowable(Throwable ex) {
-        log.error("Unhandled exception", ex);
+        log.error("Unhandled exception, message = {}", ExceptionUtils.getRootCauseMessage(ex));
         return ResponseEntity
                 .internalServerError()
                 .body(GatewayResponse.error(

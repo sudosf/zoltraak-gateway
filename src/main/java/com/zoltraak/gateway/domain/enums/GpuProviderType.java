@@ -1,6 +1,6 @@
 package com.zoltraak.gateway.domain.enums;
 
-public enum GpuProvider {
+public enum GpuProviderType {
     RUNPOD,
     VASTAI
 }

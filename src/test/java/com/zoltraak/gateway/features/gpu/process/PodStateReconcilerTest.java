@@ -1,9 +1,10 @@
-package com.zoltraak.gateway.features.gpu;
+package com.zoltraak.gateway.features.gpu.process;
 
-import com.zoltraak.gateway.adapters.gpu.GpuProviderPort;
+import com.zoltraak.gateway.adapters.gpu.GpuProvider;
 import com.zoltraak.gateway.adapters.gpu.ProviderException;
-import com.zoltraak.gateway.domain.enums.GpuProvider;
+import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ import static org.mockito.Mockito.*;
 class PodStateReconcilerTest {
 
     @Mock
-    private GpuProviderPort gpuProviderPort;
+    private GpuProvider gpuProvider;
 
     @Mock
     private GpuLifecycleManager gpuLifecycleManager;
@@ -28,7 +29,7 @@ class PodStateReconcilerTest {
 
     @BeforeEach
     void setUp() {
-        reconciler = new PodStateReconciler(gpuProviderPort, gpuLifecycleManager);
+        reconciler = new PodStateReconciler(gpuProvider, gpuLifecycleManager);
     }
 
     @Nested
@@ -36,7 +37,7 @@ class PodStateReconcilerTest {
 
         @Test
         void forwardsActualStatus_toLifecycleManager() {
-            when(gpuProviderPort.getStatus()).thenReturn(Mono.just(PodStatus.STOPPED));
+            when(gpuProvider.getStatus()).thenReturn(Mono.just(PodStatus.STOPPED));
 
             reconciler.reconcile();
 
@@ -45,7 +46,7 @@ class PodStateReconcilerTest {
 
         @Test
         void forwardsWarmingStatus_toLifecycleManager() {
-            when(gpuProviderPort.getStatus()).thenReturn(Mono.just(PodStatus.WARMING));
+            when(gpuProvider.getStatus()).thenReturn(Mono.just(PodStatus.WARMING));
 
             reconciler.reconcile();
 
@@ -57,9 +58,9 @@ class PodStateReconcilerTest {
     class WhenStatusRetrievalFails {
         @Test
         void andNoInstancesExist_treatsAsStopped() {
-            when(gpuProviderPort.getStatus())
+            when(gpuProvider.getStatus())
                     .thenReturn(Mono.error(new ProviderException(
-                            GpuProvider.VASTAI, 404, "No active GPU instances found on Vast.ai")));
+                            GpuProviderType.VASTAI, 404, "No active GPU instances found on Vast.ai")));
 
             reconciler.reconcile();
 
@@ -68,8 +69,8 @@ class PodStateReconcilerTest {
 
         @Test
         void andOtherErrorOccurs_doesNotCallLifecycleManager() {
-            when(gpuProviderPort.getStatus())
-                    .thenReturn(Mono.error(new ProviderException(GpuProvider.VASTAI, 500, "boom")));
+            when(gpuProvider.getStatus())
+                    .thenReturn(Mono.error(new ProviderException(GpuProviderType.VASTAI, 500, "boom")));
 
             reconciler.reconcile();
 

@@ -3,6 +3,7 @@ package com.zoltraak.gateway.features.gpu;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.exception.PodNotReadyException;
 import com.zoltraak.gateway.domain.exception.RequestExpiredException;
+import com.zoltraak.gateway.features.gpu.model.QueuedRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,8 @@
-package com.zoltraak.gateway.features.gpu;
+package com.zoltraak.gateway.features.gpu.process;
 
 import com.zoltraak.gateway.annotations.BackgroundProcess;
 import com.zoltraak.gateway.config.properties.QueueProperties;
+import com.zoltraak.gateway.features.gpu.RequestQueue;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 

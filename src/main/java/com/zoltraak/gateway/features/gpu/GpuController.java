@@ -2,11 +2,10 @@ package com.zoltraak.gateway.features.gpu;
 
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.response.GatewayResponse;
+import com.zoltraak.gateway.features.gpu.model.ProviderRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -17,6 +16,7 @@ public class GpuController {
     public static final String STATUS = "/status";
     public static final String START = "/start";
     public static final String STOP = "/stop";
+    public static final String PROVIDER = "/provider";
 
     private final GpuLifecycleManager gpuLifecycleManager;
 
@@ -40,5 +40,11 @@ public class GpuController {
     public Mono<ResponseEntity<GatewayResponse<Void>>> stop() {
         return gpuLifecycleManager.requestShutdown()
                 .then(Mono.just(ResponseEntity.ok(GatewayResponse.success(null))));
+    }
+
+    @PostMapping(PROVIDER)
+    public ResponseEntity<GatewayResponse<Void>> switchProvider(@Valid @RequestBody ProviderRequest provider) {
+        gpuLifecycleManager.switchProvider(provider);
+        return ResponseEntity.ok(GatewayResponse.success(null));
     }
 }

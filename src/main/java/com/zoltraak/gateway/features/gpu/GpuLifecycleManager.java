@@ -1,8 +1,11 @@
 package com.zoltraak.gateway.features.gpu;
 
-import com.zoltraak.gateway.adapters.gpu.GpuProviderPort;
+import com.zoltraak.gateway.adapters.gpu.GpuProvider;
 import com.zoltraak.gateway.config.properties.ProviderProperties;
+import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.exception.ExceptionUtils;
+import com.zoltraak.gateway.features.gpu.model.ProviderRequest;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,28 +17,29 @@ import java.time.LocalDateTime;
 @Service
 public class GpuLifecycleManager {
 
-    private final GpuProviderPort gpuProviderPort;
+    private final GpuProvider gpuProvider;
     private final PodState podState;
     private final RequestQueue requestQueue;
+    private final ProviderProperties providerProperties;
 
-    public GpuLifecycleManager(GpuProviderPort gpuProviderPort, ProviderProperties providerProperties, RequestQueue requestQueue) {
-        this.gpuProviderPort = gpuProviderPort;
+    public GpuLifecycleManager(GpuProvider gpuProvider, ProviderProperties providerProperties, RequestQueue requestQueue) {
+        this.gpuProvider = gpuProvider;
         this.podState = new PodState();
         this.podState.setStatus(PodStatus.STOPPED);
-        this.podState.setProvider(providerProperties.getActive());
         this.requestQueue = requestQueue;
+        this.providerProperties = providerProperties;
     }
 
     @PostConstruct
     void init() {
-        gpuProviderPort.getStatus()
+        gpuProvider.getStatus()
                 .doOnSuccess(status -> {
                     log.info("GPU pod startup status: {}", status);
                     onExternalStateDrift(status);
                 })
-                .doOnError(e -> log.warn(
-                        "GPU pod could not sync status on startup, defaulting to status={}, error={}",
-                        PodStatus.STOPPED, e.getMessage()))
+                .doOnError(ex -> log.warn(
+                        "GPU pod could not sync status on startup, defaulting to status = {}, message = {}",
+                        PodStatus.STOPPED, ExceptionUtils.getRootCauseMessage(ex)))
                 .onErrorComplete()
                 .subscribe();
     }
@@ -50,18 +54,18 @@ public class GpuLifecycleManager {
             return Mono.empty();
         }
 
-        log.info("GPU pod start requested, status={} -> {}", current, PodStatus.STARTING);
+        log.info("GPU pod start requested, status = {} -> {}", current, PodStatus.STARTING);
         podState.setLastActivityAt(LocalDateTime.now());
         podState.setStatus(PodStatus.STARTING);
 
-        return gpuProviderPort.start()
+        return gpuProvider.start()
                 .doOnSuccess(_ -> {
                     podState.setStatus(PodStatus.WARMING);
                     podState.setSessionStartedAt(LocalDateTime.now());
-                    log.info("GPU pod started, status={}", PodStatus.WARMING);
+                    log.info("GPU pod started, status = {}", PodStatus.WARMING);
                 })
-                .doOnError(e -> {
-                    log.warn("GPU pod start failed, rolling back status={}", current, e);
+                .doOnError(ex -> {
+                    log.debug("GPU pod start failed, rolling back status = {}, message = {}", current, ExceptionUtils.getRootCauseMessage(ex));
                     podState.setStatus(current);
                     requestQueue.onPodStartFailed(current);
                 });
@@ -80,16 +84,24 @@ public class GpuLifecycleManager {
         }
 
         podState.setStatus(PodStatus.STOPPING);
-        return gpuProviderPort.stop()
+        return gpuProvider.stop()
                 .doOnSuccess(_ -> {
                     podState.setStatus(PodStatus.STOPPED);
-                    log.info("GPU pod stopped, status={}", PodStatus.STOPPED);
+                    log.info("GPU pod stopped, status = {}", PodStatus.STOPPED);
                 })
-                .doOnError(e -> {
-                    log.warn("GPU pod shutdown failed, rolling back status={}", current, e);
+                .doOnError(ex -> {
+                    log.warn("GPU pod shutdown failed, rolling back status = {}, message = {}",
+                            current, ExceptionUtils.getRootCauseMessage(ex)
+                    );
                     podState.setStatus(current);
                     podState.setLastActivityAt(LocalDateTime.now());
                 });
+    }
+
+    public void switchProvider(ProviderRequest request) {
+        GpuProviderType currentProvider = this.providerProperties.getActive();
+        log.info("GPU provider switch requested, from {} to {}", currentProvider, request.provider());
+        this.providerProperties.setActive(request.provider());
     }
 
     public void onPodReady() {
@@ -105,9 +117,10 @@ public class GpuLifecycleManager {
     public void onExternalStateDrift(PodStatus externalStatus) {
         PodStatus currentStatus = podState.getStatus();
         if (currentStatus == externalStatus) return;
+        if (currentStatus == PodStatus.STOPPING) return;
         if (currentStatus == PodStatus.READY && externalStatus == PodStatus.WARMING) return;
 
-        log.warn("GPU pod external state drift detected, external={}, current={}", externalStatus, currentStatus);
+        log.warn("GPU pod external state drift detected, external = {}, current = {}", externalStatus, currentStatus);
 
         if (externalStatus == PodStatus.WARMING || externalStatus == PodStatus.STARTING) {
             podState.setStatus(externalStatus);

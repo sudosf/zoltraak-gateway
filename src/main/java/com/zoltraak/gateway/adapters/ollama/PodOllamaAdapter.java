@@ -1,8 +1,9 @@
 package com.zoltraak.gateway.adapters.ollama;
 
-import com.zoltraak.gateway.adapters.gpu.GpuProviderPort;
+import com.zoltraak.gateway.adapters.gpu.GpuProvider;
 import com.zoltraak.gateway.annotations.Adapter;
 import com.zoltraak.gateway.domain.models.ollama.*;
+import com.zoltraak.gateway.exception.ExceptionUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Primary;
@@ -14,11 +15,11 @@ import reactor.core.publisher.Mono;
 @Adapter
 @Primary
 public class PodOllamaAdapter implements OllamaPort {
-    private final GpuProviderPort gpuProviderPort;
+    private final GpuProvider gpuProvider;
     private final WebClient webClient;
 
-    public PodOllamaAdapter(GpuProviderPort gpuProviderPort, @Qualifier("ollamaWebClient") WebClient webClient) {
-        this.gpuProviderPort = gpuProviderPort;
+    public PodOllamaAdapter(GpuProvider gpuProvider, @Qualifier("ollamaWebClient") WebClient webClient) {
+        this.gpuProvider = gpuProvider;
         this.webClient = webClient;
     }
 
@@ -49,7 +50,7 @@ public class PodOllamaAdapter implements OllamaPort {
 
     @Override
     public Mono<Boolean> isHealthy() {
-        return gpuProviderPort
+        return gpuProvider
                 .getConnectionDetails()
                 .flatMap(connDetails -> webClient.get()
                         .uri(connDetails.ollamaUrl())
@@ -61,7 +62,7 @@ public class PodOllamaAdapter implements OllamaPort {
     }
 
     private <T, V> Flux<T> postAsFlux(String path, V body, Class<T> responseType) {
-        return gpuProviderPort
+        return gpuProvider
                 .getConnectionDetails()
                 .flatMapMany(connDetails ->
                         webClient.post()
@@ -70,11 +71,13 @@ public class PodOllamaAdapter implements OllamaPort {
                                 .retrieve()
                                 .bodyToFlux(responseType))
                 .doOnSubscribe(_ -> log.debug("Ollama POST {}", path))
-                .doOnError(e -> log.warn("Ollama POST {} failed: {}", path, e.getMessage()));
+                .doOnError(ex -> log.debug("Ollama POST {} failed: {}",
+                        path, ExceptionUtils.getRootCauseMessage(ex))
+                );
     }
 
     private <T> Mono<T> getAsMono(String path, Class<T> responseType) {
-        return gpuProviderPort
+        return gpuProvider
                 .getConnectionDetails()
                 .flatMap(connDetails ->
                         webClient.get()
@@ -82,6 +85,8 @@ public class PodOllamaAdapter implements OllamaPort {
                                 .retrieve()
                                 .bodyToMono(responseType))
                 .doOnSubscribe(_ -> log.debug("Ollama GET {}", path))
-                .doOnError(e -> log.warn("Ollama GET {} failed: {}", path, e.getMessage()));
+                .doOnError(ex -> log.debug("Ollama GET {} failed: {}",
+                        path, ExceptionUtils.getRootCauseMessage(ex))
+                );
     }
 }

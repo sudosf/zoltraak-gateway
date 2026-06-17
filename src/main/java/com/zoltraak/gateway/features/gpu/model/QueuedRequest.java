@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.features.gpu;
+package com.zoltraak.gateway.features.gpu.model;
 
 import java.time.LocalDateTime;
 import java.util.function.Consumer;

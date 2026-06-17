@@ -2,8 +2,7 @@
 # Zoltraak Pod Setup - Ollama + Vision Model
 
 echo "=== Installing system tools ==="
-apt update && apt install -y pciutils lshw curl
-
+apt update && apt install -y pciutils lshw curl zstd
 echo "=== Checking GPU ==="
 nvidia-smi
 
@@ -27,7 +26,6 @@ done
 echo "Ollama is up"
 
 echo "=== Pulling models ==="
-ollama pull huihui_ai/qwen3.5-abliterated:4b
 ollama pull Tohur/natsumura-storytelling-rp-llama-3.1
 ollama pull qwen2.5-coder:32b
 
