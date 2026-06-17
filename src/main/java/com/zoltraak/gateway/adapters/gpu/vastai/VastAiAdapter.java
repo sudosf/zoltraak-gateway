@@ -29,7 +29,7 @@ public class VastAiAdapter implements GpuProvider {
     private final WebClient webClient;
     private final OllamaProperties ollamaProperties;
     private final ProviderProperties providerProperties;
-    private Mono<Long> instanceId;
+    private Mono<Long> instanceId; // TODO wrap in AtomicReference
 
     public VastAiAdapter(
             @Qualifier("vastaiWebClient") WebClient webClient,
@@ -42,7 +42,7 @@ public class VastAiAdapter implements GpuProvider {
 
     @PostConstruct
     void init() {
-        this.instanceId = getInstanceId();
+        this.instanceId = fetchInstanceId();
     }
 
     @Override
@@ -105,7 +105,7 @@ public class VastAiAdapter implements GpuProvider {
 
                     log.warn("Vast.ai instance id not found, refreshing cache");
 
-                    this.instanceId = getInstanceId();
+                    this.instanceId = fetchInstanceId();
                     return this.instanceId
                             .flatMap(this::fetchInstance)
                             .filter(res -> res.instances() != null)
@@ -115,7 +115,7 @@ public class VastAiAdapter implements GpuProvider {
                 });
     }
 
-    private Mono<Long> getInstanceId() {
+    private Mono<Long> fetchInstanceId() {
         return fetchInstances()
                 .flatMapIterable(VastAiInstancePage::instances)
                 .next()

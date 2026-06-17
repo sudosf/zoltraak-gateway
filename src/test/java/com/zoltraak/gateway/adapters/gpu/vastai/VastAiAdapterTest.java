@@ -12,9 +12,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.test.StepVerifier;
 
@@ -24,14 +21,11 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class VastAiAdapterTest {
 
     private MockWebServer mockWebServer;
     private VastAiAdapter adapter;
     private OllamaProperties ollamaProperties;
-
-    @Mock
     private ProviderProperties providerProperties;
 
     @BeforeEach
@@ -46,6 +40,9 @@ class VastAiAdapterTest {
 
         this.ollamaProperties = mock(OllamaProperties.class);
         when(ollamaProperties.getGpuPod()).thenReturn(gpuPodConfig);
+
+        this.providerProperties = new ProviderProperties();
+        this.providerProperties.setIdCacheHours(1);
 
         WebClient webClient = WebClient.builder()
                 .baseUrl(baseUrl)
@@ -121,11 +118,6 @@ class VastAiAdapterTest {
 
     @Nested
     class WhenInitializationFails {
-
-        @BeforeEach
-        void setUp() {
-            enqueueInstancePage();
-        }
 
         @Test
         void throwsProviderException_whenInitializationErrors() throws IOException {
