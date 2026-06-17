@@ -1,7 +1,6 @@
 package com.zoltraak.gateway.config;
 
 import com.zoltraak.gateway.config.properties.ProviderProperties;
-import com.zoltraak.gateway.domain.enums.GpuProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -14,44 +13,68 @@ import java.time.Duration;
 @Configuration
 public class WebClientConfig {
 
-    // TODO create separate webclients for vast and runpod
-    // TODO {NOT} remove base url and api initialization
+    private final ProviderProperties providerProperties;
+
+    public WebClientConfig(ProviderProperties providerProperties) {
+        this.providerProperties = providerProperties;
+    }
 
     @Bean
-    public WebClient providerWebClient(ProviderProperties providerProperties) {
-        ConnectionProvider connProvider = ConnectionProvider.builder("gpuProviderConnProvider")
-                .maxIdleTime(Duration.ofSeconds(providerProperties.getResponseTimeoutSeconds()))
-                .build();
+    public WebClient runpodWebClient() {
+        return buildGpuProviderWebClient(
+                "runpodConnProvider",
+                new ProviderConfig(
+                        providerProperties.getRunpod().getBaseUrl(), providerProperties.getRunpod().getApiKey())
+        );
+    }
 
-
-        HttpClient httpClient = HttpClient.create(connProvider)
-                .followRedirect(true)
-                .responseTimeout(Duration.ofSeconds(providerProperties.getResponseTimeoutSeconds()));
-
-        String baseUrl = activeBaseUrl(providerProperties);
-        String apiKey = activeApiKey(providerProperties);
-
-        return WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .baseUrl(baseUrl)
-                .defaultHeader("Authorization", "Bearer %s".formatted(apiKey))
-                .build();
+    @Bean
+    public WebClient vastaiWebClient() {
+        return buildGpuProviderWebClient(
+                "vastaiConnProvider",
+                new ProviderConfig(
+                        providerProperties.getVastAi().getBaseUrl(), providerProperties.getVastAi().getApiKey())
+        );
     }
 
     @Bean
     public WebClient ollamaWebClient() {
-        return WebClient.builder().build();
+        ConnectionProvider connProvider = buildConnectionProvider("ollamaConnProvider");
+        HttpClient httpClient = createHttpClient(connProvider);
+
+        return WebClient
+                .builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
     }
 
-    private String activeBaseUrl(ProviderProperties providerProperties) {
-        return providerProperties.getActive() == GpuProvider.VASTAI
-                ? providerProperties.getVastAi().getBaseUrl()
-                : providerProperties.getRunPod().getBaseUrl();
+    private WebClient buildGpuProviderWebClient(String connProviderName, ProviderConfig providerConfig) {
+        ConnectionProvider connProvider = buildConnectionProvider(connProviderName);
+        HttpClient httpClient = createHttpClient(connProvider);
+
+        return buildWebClient(httpClient, providerConfig);
     }
 
-    private String activeApiKey(ProviderProperties providerProperties) {
-        return providerProperties.getActive() == GpuProvider.VASTAI
-                ? providerProperties.getVastAi().getApiKey()
-                : providerProperties.getRunPod().getApiKey();
+    private WebClient buildWebClient(HttpClient httpClient, ProviderConfig providerConfig) {
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .baseUrl(providerConfig.baseUrl)
+                .defaultHeader("Authorization", "Bearer %s".formatted(providerConfig.apiKey))
+                .build();
+    }
+
+    private HttpClient createHttpClient(ConnectionProvider connProvider) {
+        return HttpClient.create(connProvider)
+                .followRedirect(true)
+                .responseTimeout(Duration.ofSeconds(providerProperties.getResponseTimeoutSeconds()));
+    }
+
+    private ConnectionProvider buildConnectionProvider(String name) {
+        return ConnectionProvider.builder(name)
+                .maxIdleTime(Duration.ofSeconds(providerProperties.getResponseTimeoutSeconds()))
+                .build();
+    }
+
+    private record ProviderConfig(String baseUrl, String apiKey) {
     }
 }

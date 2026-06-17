@@ -1,8 +1,10 @@
-package com.zoltraak.gateway.features.gpu;
+package com.zoltraak.gateway.features.gpu.process;
 
 import com.zoltraak.gateway.annotations.BackgroundProcess;
 import com.zoltraak.gateway.config.properties.GpuProperties;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.exception.ExceptionUtils;
+import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -33,11 +35,14 @@ public class IdleTimerChecker {
         long minutesElapsed = ChronoUnit.MINUTES.between(lastActivityAt, now);
 
         if (minutesElapsed >= gpuProperties.getIdleCheckTimeoutMinutes()) {
-            log.info("GPU pod idle for {}m, threshold {}m, requesting shutdown", minutesElapsed, gpuProperties.getIdleCheckTimeoutMinutes());
+            log.info("GPU pod idle for {}m, threshold {}m, requesting shutdown",
+                    minutesElapsed, gpuProperties.getIdleCheckTimeoutMinutes()
+            );
 
             gpuLifecycleManager.requestShutdown().subscribe(
                     null,
-                    error -> log.error("GPU pod failed to shutdown GPU pod: ", error)
+                    error -> log.error("GPU pod failed to shutdown GPU pod, message = {}",
+                            ExceptionUtils.getRootCauseMessage(error))
             );
         }
     }

@@ -1,6 +1,7 @@
-package com.zoltraak.gateway.features.gpu;
+package com.zoltraak.gateway.features.gpu.process;
 
 import com.zoltraak.gateway.config.properties.QueueProperties;
+import com.zoltraak.gateway.features.gpu.RequestQueue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

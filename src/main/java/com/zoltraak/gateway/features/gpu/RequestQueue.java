@@ -4,6 +4,7 @@ import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.exception.PodNotReadyException;
 import com.zoltraak.gateway.domain.exception.RequestExpiredException;
+import com.zoltraak.gateway.features.gpu.model.QueuedRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +32,7 @@ public class RequestQueue {
 
         QueuedRequest request;
         while ((request = dequeue()) != null) {
-            log.debug("GPU pod request processing id={}", request.requestId());
+            log.debug("GPU pod request processing id = {}", request.requestId());
             request.task().run();
         }
     }

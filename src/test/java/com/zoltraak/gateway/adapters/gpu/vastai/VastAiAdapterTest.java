@@ -1,7 +1,9 @@
-package com.zoltraak.gateway.adapters.gpu;
+package com.zoltraak.gateway.adapters.gpu.vastai;
 
+import com.zoltraak.gateway.adapters.gpu.ProviderException;
 import com.zoltraak.gateway.config.properties.OllamaProperties;
-import com.zoltraak.gateway.domain.enums.GpuProvider;
+import com.zoltraak.gateway.config.properties.ProviderProperties;
+import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -24,6 +26,7 @@ class VastAiAdapterTest {
     private MockWebServer mockWebServer;
     private VastAiAdapter adapter;
     private OllamaProperties ollamaProperties;
+    private ProviderProperties providerProperties;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -38,11 +41,14 @@ class VastAiAdapterTest {
         this.ollamaProperties = mock(OllamaProperties.class);
         when(ollamaProperties.getGpuPod()).thenReturn(gpuPodConfig);
 
+        this.providerProperties = new ProviderProperties();
+        this.providerProperties.setIdCacheHours(1);
+
         WebClient webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .build();
 
-        adapter = new VastAiAdapter(webClient, ollamaProperties);
+        adapter = new VastAiAdapter(webClient, ollamaProperties, providerProperties);
         adapter.init();
     }
 
@@ -113,11 +119,6 @@ class VastAiAdapterTest {
     @Nested
     class WhenInitializationFails {
 
-        @BeforeEach
-        void setUp() {
-            enqueueInstancePage();
-        }
-
         @Test
         void throwsProviderException_whenInitializationErrors() throws IOException {
             try (MockWebServer localServer = new MockWebServer()) {
@@ -165,7 +166,7 @@ class VastAiAdapterTest {
                 StepVerifier.create(missingPodAdapter.getConnectionDetails())
                         .expectErrorMatches(throwable -> throwable instanceof ProviderException ex
                                 && ex.getHttpStatusCode() == 404
-                                && ex.getProvider() == GpuProvider.VASTAI)
+                                && ex.getProvider() == GpuProviderType.VASTAI)
                         .verify();
             }
         }
@@ -178,7 +179,7 @@ class VastAiAdapterTest {
                     .baseUrl("http://localhost:" + localServer.getPort())
                     .build();
 
-            VastAiAdapter isolatedAdapter = new VastAiAdapter(localClient, ollamaProperties);
+            VastAiAdapter isolatedAdapter = new VastAiAdapter(localClient, ollamaProperties, providerProperties);
             isolatedAdapter.init();
             return isolatedAdapter;
         }

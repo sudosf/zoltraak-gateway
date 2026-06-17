@@ -1,4 +1,4 @@
-package com.zoltraak.gateway.adapters.gpu.model;
+package com.zoltraak.gateway.adapters.gpu.vastai.model;
 
 import lombok.Data;
 import tools.jackson.databind.PropertyNamingStrategies;

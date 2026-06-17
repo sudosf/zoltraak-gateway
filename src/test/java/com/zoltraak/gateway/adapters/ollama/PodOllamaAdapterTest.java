@@ -1,6 +1,6 @@
 package com.zoltraak.gateway.adapters.ollama;
 
-import com.zoltraak.gateway.adapters.gpu.GpuProviderPort;
+import com.zoltraak.gateway.adapters.gpu.GpuProvider;
 import com.zoltraak.gateway.domain.models.ollama.*;
 import com.zoltraak.gateway.domain.models.provider.PodConnectionDetails;
 import okhttp3.mockwebserver.MockResponse;
@@ -33,12 +33,12 @@ class PodOllamaAdapterTest {
 
         String baseUrl = "http://localhost:" + mockWebServer.getPort() + "/";
 
-        GpuProviderPort gpuProviderPort = mock(GpuProviderPort.class);
-        when(gpuProviderPort.getConnectionDetails())
+        GpuProvider gpuProvider = mock(GpuProvider.class);
+        when(gpuProvider.getConnectionDetails())
                 .thenReturn(Mono.just(new PodConnectionDetails(baseUrl, null)));
 
         WebClient webClient = WebClient.create();
-        adapter = new PodOllamaAdapter(gpuProviderPort, webClient);
+        adapter = new PodOllamaAdapter(gpuProvider, webClient);
     }
 
     @AfterEach

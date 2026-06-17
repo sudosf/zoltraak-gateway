@@ -1,7 +1,8 @@
-package com.zoltraak.gateway.features.gpu;
+package com.zoltraak.gateway.features.gpu.process;
 
 import com.zoltraak.gateway.config.properties.GpuProperties;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

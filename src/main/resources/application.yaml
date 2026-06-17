@@ -10,13 +10,12 @@ server:
 
 zoltraak:
   provider:
-    active: vastai
+    active: runpod
     response-timeout-seconds: 30
+    id-cache-hours: 3
     vastai:
       base-url: https://console.vast.ai
     runpod:
-      api-key: todo
-      pod-id: todo
       base-url: https://rest.runpod.io/v1
 
   ollama:
