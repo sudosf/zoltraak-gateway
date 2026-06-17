@@ -1,7 +1,9 @@
 package com.zoltraak.gateway.adapters.gpu;
 
+import com.zoltraak.gateway.adapters.gpu.runpod.RunpodAdapter;
+import com.zoltraak.gateway.adapters.gpu.vastai.VastAiAdapter;
 import com.zoltraak.gateway.config.properties.ProviderProperties;
-import com.zoltraak.gateway.domain.enums.GpuProvider;
+import com.zoltraak.gateway.domain.enums.GpuProviderType;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.domain.models.provider.PodConnectionDetails;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,13 +27,16 @@ class ProviderRegistryTest {
     private VastAiAdapter vastAiAdapter;
 
     @Mock
+    private RunpodAdapter runpodAdapter;
+
+    @Mock
     private ProviderProperties providerProperties;
 
     private ProviderRegistry registry;
 
     @BeforeEach
     void setUp() {
-        registry = new ProviderRegistry(providerProperties, vastAiAdapter);
+        registry = new ProviderRegistry(providerProperties, vastAiAdapter, runpodAdapter);
     }
 
     @Nested
@@ -39,7 +44,7 @@ class ProviderRegistryTest {
 
         @BeforeEach
         void setUp() {
-            when(providerProperties.getActive()).thenReturn(GpuProvider.VASTAI);
+            when(providerProperties.getActive()).thenReturn(GpuProviderType.VASTAI);
         }
 
         @Test
@@ -96,7 +101,7 @@ class ProviderRegistryTest {
 
         @BeforeEach
         void setUp() {
-            when(providerProperties.getActive()).thenReturn(GpuProvider.RUNPOD);
+            when(providerProperties.getActive()).thenReturn(GpuProviderType.RUNPOD);
         }
 
         @Test
