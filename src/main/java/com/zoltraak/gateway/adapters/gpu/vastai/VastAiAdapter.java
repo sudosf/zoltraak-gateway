@@ -158,7 +158,7 @@ public class VastAiAdapter implements GpuProvider {
                         handleErrorResponse())
                 .bodyToMono(responseType)
                 .doOnSubscribe(_ -> log.debug("Vast.ai GET path = {}", path))
-                .doOnError(e -> log.warn("Vast.ai GET failed, path = {} error = {}",
+                .doOnError(e -> log.debug("Vast.ai GET failed, path = {} error = {}",
                         path, ExceptionUtils.getRootCauseMessage(e))
                 );
     }

@@ -71,7 +71,7 @@ public class PodOllamaAdapter implements OllamaPort {
                                 .retrieve()
                                 .bodyToFlux(responseType))
                 .doOnSubscribe(_ -> log.debug("Ollama POST {}", path))
-                .doOnError(ex -> log.warn("Ollama POST {} failed: {}",
+                .doOnError(ex -> log.debug("Ollama POST {} failed: {}",
                         path, ExceptionUtils.getRootCauseMessage(ex))
                 );
     }
@@ -85,7 +85,7 @@ public class PodOllamaAdapter implements OllamaPort {
                                 .retrieve()
                                 .bodyToMono(responseType))
                 .doOnSubscribe(_ -> log.debug("Ollama GET {}", path))
-                .doOnError(ex -> log.warn("Ollama GET {} failed: {}",
+                .doOnError(ex -> log.debug("Ollama GET {} failed: {}",
                         path, ExceptionUtils.getRootCauseMessage(ex))
                 );
     }

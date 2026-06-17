@@ -24,7 +24,8 @@ public class AuthFilter implements WebFilter {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        if (exchange.getRequest().getPath().value().equals("/api/v1/health")) {
+        String path = exchange.getRequest().getPath().value();
+        if (path.startsWith("/scalar") || path.startsWith("/v3/api-docs")) {
             return chain.filter(exchange);
         }
 
