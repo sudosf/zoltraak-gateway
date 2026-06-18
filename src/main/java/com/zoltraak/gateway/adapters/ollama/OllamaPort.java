@@ -1,19 +1,24 @@
 package com.zoltraak.gateway.adapters.ollama;
 
-import com.zoltraak.gateway.domain.models.ollama.*;
+import org.springframework.http.HttpHeaders;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+
 public interface OllamaPort {
-    Flux<OllamaGenerateResponse> generate(OllamaGenerateRequest request);
+    Flux<byte[]> generate(Flux<byte[]> request, HttpHeaders headers);
 
-    Flux<OllamaChatResponse> chat(OllamaChatRequest request);
+    Flux<byte[]> chat(Flux<byte[]> request, HttpHeaders headers);
 
-    Mono<OllamaModelsResponse> getTags();
+    Mono<byte[]> embed(Flux<byte[]> request, HttpHeaders headers);
 
-    Mono<OllamaModelsResponse> getPs();
+    Mono<byte[]> show(Flux<byte[]> request, HttpHeaders headers);
 
-    Mono<OllamaVersionResponse> getVersion();
+    Mono<byte[]> getTags(HttpHeaders headers);
+
+    Mono<byte[]> getPs(HttpHeaders headers);
+
+    Mono<byte[]> getVersion(HttpHeaders headers);
 
     Mono<Boolean> isHealthy();
 }
