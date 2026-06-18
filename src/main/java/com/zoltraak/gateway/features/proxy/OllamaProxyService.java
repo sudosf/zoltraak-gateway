@@ -1,6 +1,6 @@
 package com.zoltraak.gateway.features.proxy;
 
-import com.zoltraak.gateway.adapters.ollama.OllamaPort;
+import com.zoltraak.gateway.adapters.ollama.OllamaClient;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.exception.ExceptionUtils;
 import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
@@ -20,42 +20,42 @@ import java.util.function.Consumer;
 @Service
 public class OllamaProxyService {
 
-    private final OllamaPort ollamaPort;
+    private final OllamaClient ollamaClient;
     private final GpuLifecycleManager gpuLifecycleManager;
     private final RequestQueue requestQueue;
 
-    public OllamaProxyService(OllamaPort ollamaPort, GpuLifecycleManager gpuLifecycleManager, RequestQueue requestQueue) {
-        this.ollamaPort = ollamaPort;
+    public OllamaProxyService(OllamaClient ollamaClient, GpuLifecycleManager gpuLifecycleManager, RequestQueue requestQueue) {
+        this.ollamaClient = ollamaClient;
         this.gpuLifecycleManager = gpuLifecycleManager;
         this.requestQueue = requestQueue;
     }
 
     public Flux<byte[]> forwardChat(Flux<byte[]> request, HttpHeaders headers) {
-        return withPodReady(ollamaPort.chat(request, headers));
+        return withPodReady(ollamaClient.chat(request, headers));
     }
 
     public Flux<byte[]> forwardGenerate(Flux<byte[]> request, HttpHeaders headers) {
-        return withPodReady(ollamaPort.generate(request, headers));
+        return withPodReady(ollamaClient.generate(request, headers));
     }
 
     public Mono<byte[]> embed(Flux<byte[]> request, HttpHeaders headers) {
-        return withPodReady(ollamaPort.embed(request, headers));
+        return withPodReady(ollamaClient.embed(request, headers));
     }
 
     public Mono<byte[]> show(Flux<byte[]> request, HttpHeaders headers) {
-        return withPodReady(ollamaPort.show(request, headers));
+        return withPodReady(ollamaClient.show(request, headers));
     }
 
     public Mono<byte[]> getTags(HttpHeaders headers) {
-        return withPodReady(ollamaPort.getTags(headers));
+        return withPodReady(ollamaClient.getTags(headers));
     }
 
     public Mono<byte[]> getPs(HttpHeaders headers) {
-        return withPodReady(ollamaPort.getPs(headers));
+        return withPodReady(ollamaClient.getPs(headers));
     }
 
     public Mono<byte[]> getVersion(HttpHeaders headers) {
-        return withPodReady(ollamaPort.getVersion(headers));
+        return withPodReady(ollamaClient.getVersion(headers));
     }
 
     public <T> Mono<T> withPodReady(Mono<T> operation) {
