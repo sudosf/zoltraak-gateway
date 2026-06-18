@@ -4,6 +4,10 @@ zoltraak:
       api-key: ${VAST_AI_API_KEY_DEV}
     runpod:
       api-key: ${RUNPOD_API_KEY_DEV}
+  security:
+    open-webui:
+      api-key: ${OPEN_WEB_UI_API_KEY}
+
 logging:
   level:
     com.zoltraak: DEBUG
