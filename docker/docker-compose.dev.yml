@@ -7,6 +7,6 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - RUNPOD_API_KEY_DEV=${RUNPOD_API_KEY_DEV}
-      - OPEN_WEB_UI_API_KEY=${OPEN_WEB_UI_API_KEY}
       - VAST_AI_API_KEY_DEV=${VAST_AI_API_KEY_DEV}
+      - GATEWAY_API_KEY=${GATEWAY_API_KEY}
     restart: unless-stopped

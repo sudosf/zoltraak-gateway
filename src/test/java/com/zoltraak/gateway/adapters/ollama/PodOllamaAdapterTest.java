@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -20,7 +19,6 @@ import java.io.IOException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-// TODO create and handle ollama exceptions
 class PodOllamaAdapterTest {
 
     private MockWebServer mockWebServer;
@@ -112,7 +110,7 @@ class PodOllamaAdapterTest {
             mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
             StepVerifier.create(adapter.getVersion(new HttpHeaders()))
-                    .expectError(WebClientResponseException.class)
+                    .expectError(OllamaException.class)
                     .verify();
         }
     }
@@ -137,7 +135,7 @@ class PodOllamaAdapterTest {
             mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
             StepVerifier.create(adapter.getTags(new HttpHeaders()))
-                    .expectError(WebClientResponseException.class)
+                    .expectError(OllamaException.class)
                     .verify();
         }
     }
@@ -162,7 +160,7 @@ class PodOllamaAdapterTest {
             mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
             StepVerifier.create(adapter.getPs(new HttpHeaders()))
-                    .expectError(WebClientResponseException.class)
+                    .expectError(OllamaException.class)
                     .verify();
         }
     }
@@ -198,7 +196,7 @@ class PodOllamaAdapterTest {
             mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
             StepVerifier.create(adapter.generate(Flux.just("{}".getBytes()), new HttpHeaders()))
-                    .expectError(WebClientResponseException.class)
+                    .expectError(OllamaException.class)
                     .verify();
         }
     }
@@ -234,7 +232,7 @@ class PodOllamaAdapterTest {
             mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
             StepVerifier.create(adapter.chat(Flux.just("{}".getBytes()), new HttpHeaders()))
-                    .expectError(WebClientResponseException.class)
+                    .expectError(OllamaException.class)
                     .verify();
         }
     }
@@ -266,7 +264,7 @@ class PodOllamaAdapterTest {
             mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
             StepVerifier.create(adapter.embed(Flux.just("{}".getBytes()), new HttpHeaders()))
-                    .expectError(WebClientResponseException.class)
+                    .expectError(OllamaException.class)
                     .verify();
         }
     }
@@ -297,7 +295,7 @@ class PodOllamaAdapterTest {
             mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
             StepVerifier.create(adapter.show(Flux.just("{}".getBytes()), new HttpHeaders()))
-                    .expectError(WebClientResponseException.class)
+                    .expectError(OllamaException.class)
                     .verify();
         }
     }
