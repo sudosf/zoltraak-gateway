@@ -5,12 +5,12 @@ import lombok.Getter;
 
 @Getter
 public class OllamaException extends ZoltraakGatewayException {
-    private final String modelName;
-    private final String reason;
+    private final int statusCode;
+    private final byte[] body;
 
-    public OllamaException(String modelName, String reason, String message) {
-        super(message);
-        this.modelName = modelName;
-        this.reason = reason;
+    public OllamaException(int statusCode, byte[] body) {
+        super("Ollama call failed with status " + statusCode);
+        this.statusCode = statusCode;
+        this.body = body;
     }
 }
