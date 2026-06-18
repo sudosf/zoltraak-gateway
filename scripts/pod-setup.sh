@@ -27,6 +27,6 @@ echo "Ollama is up"
 
 echo "=== Pulling models ==="
 ollama pull Tohur/natsumura-storytelling-rp-llama-3.1
-ollama pull qwen2.5-coder:32b
+ollaam pullqwen3-coder:30b
 
 echo "=== Done ==="
