@@ -31,9 +31,8 @@ public class OllamaProxyController {
         return ollamaProxyService.forwardChat(request, headers);
     }
 
-    // TODO revisit function name
     @PostMapping(value = CHAT_COMPLETIONS, produces = {"application/x-ndjson", "text/event-stream", "application/json"})
-    public Flux<byte[]> openAiChat(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
+    public Flux<byte[]> chatCompletions(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
         return ollamaProxyService.forwardChat(request, headers);
     }
 

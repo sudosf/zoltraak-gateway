@@ -5,7 +5,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 
-public interface OllamaPort {
+public interface OllamaClient {
     Flux<byte[]> generate(Flux<byte[]> request, HttpHeaders headers);
 
     Flux<byte[]> chat(Flux<byte[]> request, HttpHeaders headers);

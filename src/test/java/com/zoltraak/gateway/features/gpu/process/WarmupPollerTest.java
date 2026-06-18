@@ -1,6 +1,6 @@
 package com.zoltraak.gateway.features.gpu.process;
 
-import com.zoltraak.gateway.adapters.ollama.OllamaPort;
+import com.zoltraak.gateway.adapters.ollama.OllamaClient;
 import com.zoltraak.gateway.config.properties.GpuProperties;
 import com.zoltraak.gateway.domain.enums.PodStatus;
 import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
@@ -25,7 +25,7 @@ class WarmupPollerTest {
     private GpuLifecycleManager gpuLifecycleManager;
 
     @Mock
-    private OllamaPort ollamaPort;
+    private OllamaClient ollamaClient;
 
     @Mock
     private GpuProperties gpuProperties;
@@ -34,7 +34,7 @@ class WarmupPollerTest {
 
     @BeforeEach
     void setUp() {
-        poller = new WarmupPoller(gpuLifecycleManager, ollamaPort, gpuProperties);
+        poller = new WarmupPoller(gpuLifecycleManager, ollamaClient, gpuProperties);
     }
 
     @Nested
@@ -47,7 +47,7 @@ class WarmupPollerTest {
 
             poller.poll();
 
-            verifyNoInteractions(ollamaPort);
+            verifyNoInteractions(ollamaClient);
         }
     }
 
@@ -67,7 +67,7 @@ class WarmupPollerTest {
             poller.poll();
 
             verify(gpuLifecycleManager).onPodDegraded();
-            verifyNoInteractions(ollamaPort);
+            verifyNoInteractions(ollamaClient);
         }
 
         @Test
@@ -77,7 +77,7 @@ class WarmupPollerTest {
 
             poller.poll();
 
-            verifyNoInteractions(ollamaPort);
+            verifyNoInteractions(ollamaClient);
         }
 
         @Nested
@@ -93,7 +93,7 @@ class WarmupPollerTest {
 
             @Test
             void whenHealthy_setsStatusToReady() {
-                when(ollamaPort.isHealthy()).thenReturn(Mono.just(true));
+                when(ollamaClient.isHealthy()).thenReturn(Mono.just(true));
 
                 poller.poll();
 
@@ -102,7 +102,7 @@ class WarmupPollerTest {
 
             @Test
             void whenNotHealthy_doesNotChangeStatus() {
-                when(ollamaPort.isHealthy()).thenReturn(Mono.just(false));
+                when(ollamaClient.isHealthy()).thenReturn(Mono.just(false));
 
                 poller.poll();
 

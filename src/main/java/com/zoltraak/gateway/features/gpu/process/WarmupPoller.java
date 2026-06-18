@@ -1,6 +1,6 @@
 package com.zoltraak.gateway.features.gpu.process;
 
-import com.zoltraak.gateway.adapters.ollama.OllamaPort;
+import com.zoltraak.gateway.adapters.ollama.OllamaClient;
 import com.zoltraak.gateway.annotations.BackgroundProcess;
 import com.zoltraak.gateway.config.properties.GpuProperties;
 import com.zoltraak.gateway.domain.enums.PodStatus;
@@ -17,13 +17,13 @@ import java.time.temporal.ChronoUnit;
 public class WarmupPoller {
 
     private final GpuLifecycleManager gpuLifecycleManager;
-    private final OllamaPort ollamaPort;
+    private final OllamaClient ollamaClient;
     private final GpuProperties gpuProperties;
     private long lastErrorLoggedMinute = -1;
 
-    public WarmupPoller(GpuLifecycleManager gpuLifecycleManager, OllamaPort ollamaPort, GpuProperties gpuProperties) {
+    public WarmupPoller(GpuLifecycleManager gpuLifecycleManager, OllamaClient ollamaClient, GpuProperties gpuProperties) {
         this.gpuLifecycleManager = gpuLifecycleManager;
-        this.ollamaPort = ollamaPort;
+        this.ollamaClient = ollamaClient;
         this.gpuProperties = gpuProperties;
     }
 
@@ -45,7 +45,7 @@ public class WarmupPoller {
             return;
         }
 
-        ollamaPort.isHealthy().subscribe(
+        ollamaClient.isHealthy().subscribe(
                 healthy -> {
                     if (healthy) {
                         log.info("GPU pod healthy after {}m, status = {}", minutesElapsed, PodStatus.READY);
