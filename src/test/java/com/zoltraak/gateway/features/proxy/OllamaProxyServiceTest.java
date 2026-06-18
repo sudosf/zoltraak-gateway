@@ -3,7 +3,6 @@ package com.zoltraak.gateway.features.proxy;
 
 import com.zoltraak.gateway.adapters.ollama.OllamaPort;
 import com.zoltraak.gateway.domain.enums.PodStatus;
-import com.zoltraak.gateway.domain.models.ollama.*;
 import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
 import com.zoltraak.gateway.features.gpu.RequestQueue;
 import com.zoltraak.gateway.features.gpu.model.QueuedRequest;
@@ -15,11 +14,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-import java.util.List;
 
 import static org.mockito.Mockito.*;
 
@@ -42,14 +40,14 @@ class OllamaProxyServiceTest {
 
     @Nested
     class WhenPodIsAvailable {
-        OllamaVersionResponse response = new OllamaVersionResponse("0.1.0");
+        byte[] response = "{\"version\": \"0.1.0\"}".getBytes();
 
         @Test
         void whenReady_operationProceeds() {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.READY);
-            when(ollamaPort.getVersion()).thenReturn(Mono.just(response));
+            when(ollamaPort.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
-            StepVerifier.create(service.getVersion())
+            StepVerifier.create(service.getVersion(new HttpHeaders()))
                     .expectNext(response)
                     .verifyComplete();
         }
@@ -57,9 +55,9 @@ class OllamaProxyServiceTest {
         @Test
         void whenReady_resetsIdleTimer() {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.READY);
-            when(ollamaPort.getVersion()).thenReturn(Mono.just(response));
+            when(ollamaPort.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
-            StepVerifier.create(service.getVersion()).expectNextCount(1).verifyComplete();
+            StepVerifier.create(service.getVersion(new HttpHeaders())).expectNextCount(1).verifyComplete();
 
             verify(gpuLifecycleManager).resetIdleTimer();
         }
@@ -67,9 +65,9 @@ class OllamaProxyServiceTest {
         @Test
         void whenDegraded_operationProceeds() {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.DEGRADED);
-            when(ollamaPort.getVersion()).thenReturn(Mono.just(response));
+            when(ollamaPort.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
-            StepVerifier.create(service.getVersion())
+            StepVerifier.create(service.getVersion(new HttpHeaders()))
                     .expectNext(response)
                     .verifyComplete();
         }
@@ -77,9 +75,9 @@ class OllamaProxyServiceTest {
         @Test
         void whenDegraded_doesNotResetIdleTimer() {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.DEGRADED);
-            when(ollamaPort.getVersion()).thenReturn(Mono.just(response));
+            when(ollamaPort.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
-            StepVerifier.create(service.getVersion()).expectNextCount(1).verifyComplete();
+            StepVerifier.create(service.getVersion(new HttpHeaders())).expectNextCount(1).verifyComplete();
 
             verify(gpuLifecycleManager, never()).resetIdleTimer();
         }
@@ -93,7 +91,7 @@ class OllamaProxyServiceTest {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.STOPPED);
             when(gpuLifecycleManager.requestStart()).thenReturn(Mono.empty());
 
-            service.getVersion().subscribe();
+            service.getVersion(new HttpHeaders()).subscribe();
 
             verify(gpuLifecycleManager).requestStart();
             verify(requestQueue).enqueue(any(QueuedRequest.class));
@@ -104,7 +102,7 @@ class OllamaProxyServiceTest {
         void whenTransitioning_enqueuesRequest_withoutRequestingStart(PodStatus status) {
             when(gpuLifecycleManager.getStatus()).thenReturn(status);
 
-            service.getVersion().subscribe();
+            service.getVersion(new HttpHeaders()).subscribe();
 
             verify(gpuLifecycleManager, never()).requestStart();
             verify(requestQueue).enqueue(any(QueuedRequest.class));
@@ -121,54 +119,66 @@ class OllamaProxyServiceTest {
 
         @Test
         void forwardChat_streamsResponsesFromPort() {
-            OllamaChatRequest request = new OllamaChatRequest(
-                    "llama3", List.of(), false, false
-            );
+            byte[] request = "{\"model\": \"llama3\", \"messages\": [], \"stream\": false, \"raw\": false}".getBytes();
+            byte[] response = "{\"model\": \"llama3\", \"done\": true}".getBytes();
 
-            OllamaChatResponse response = new OllamaChatResponse(
-                    "llama3", null, null,
-                    true, null, null,
-                    null, null, null,
-                    null, null
-            );
+            when(ollamaPort.chat(any(), any(HttpHeaders.class))).thenReturn(Flux.just(response));
 
-            when(ollamaPort.chat(request)).thenReturn(Flux.just(response));
-
-            StepVerifier.create(service.forwardChat(request))
+            StepVerifier.create(service.forwardChat(Flux.just(request), new HttpHeaders()))
                     .expectNextCount(1)
                     .verifyComplete();
-            verify(ollamaPort).chat(request);
+            verify(ollamaPort).chat(any(), any(HttpHeaders.class));
         }
 
         @Test
         void forwardGenerate_callsGenerateOnPort() {
-            OllamaGenerateRequest request = new OllamaGenerateRequest(
-                    "llama3", "hello", List.of(),
-                    false, false, null
-            );
+            byte[] requestBytes = "{\"model\": \"llama3\", \"prompt\": \"hello\", \"messages\": [], \"stream\": false, \"raw\": false}".getBytes();
+            byte[] response = "{\"model\": \"llama3\", \"response\": \"response text\", \"done\": true}".getBytes();
 
-            when(ollamaPort.generate(request)).thenReturn(Flux.just(
-                    new OllamaGenerateResponse(
-                            "llama3", null, "response text",
-                            null, true, null)
-            ));
+            when(ollamaPort.generate(any(), any(HttpHeaders.class))).thenReturn(Flux.just(response));
 
-            StepVerifier.create(service.forwardGenerate(request))
+            StepVerifier.create(service.forwardGenerate(Flux.just(requestBytes), new HttpHeaders()))
                     .expectNextCount(1)
                     .verifyComplete();
-
-            verify(ollamaPort).generate(request);
+            verify(ollamaPort).generate(any(), any(HttpHeaders.class));
         }
 
         @Test
         void getTags_returnsPortResponse() {
-            OllamaModelsResponse response = new OllamaModelsResponse(List.of());
-            when(ollamaPort.getTags()).thenReturn(Mono.just(response));
+            byte[] response = "{\"models\": []}".getBytes();
 
-            StepVerifier.create(service.getTags())
+            when(ollamaPort.getTags(any(HttpHeaders.class))).thenReturn(Mono.just(response));
+
+            StepVerifier.create(service.getTags(new HttpHeaders()))
                     .expectNextCount(1)
                     .verifyComplete();
-            verify(ollamaPort).getTags();
+            verify(ollamaPort).getTags(any(HttpHeaders.class));
+        }
+
+        @Test
+        void embed_returnsPortResponse() {
+            byte[] requestBytes = "{\"model\": \"embeddinggemma\", \"input\": \"hello\"}".getBytes();
+            byte[] response = "{\"model\": \"embeddinggemma\", \"embeddings\": [[0.01, 0.02]]}".getBytes();
+
+            when(ollamaPort.embed(any(), any(HttpHeaders.class))).thenReturn(Mono.just(response));
+
+            StepVerifier.create(service.embed(Flux.just(requestBytes), new HttpHeaders()))
+                    .expectNextCount(1)
+                    .verifyComplete();
+            verify(ollamaPort).embed(any(), any(HttpHeaders.class));
+        }
+
+        @Test
+        void show_returnsPortResponse() {
+            byte[] requestBytes = "{\"model\": \"llama3\"}".getBytes();
+            byte[] response = "{\"modelfile\": \"FROM llama3\"}".getBytes();
+
+            when(ollamaPort.show(any(), any(HttpHeaders.class))).thenReturn(Mono.just(response));
+
+            StepVerifier.create(service.show(Flux.just(requestBytes), new HttpHeaders()))
+                    .expectNextCount(1)
+                    .verifyComplete();
+            verify(ollamaPort).show(any(), any(HttpHeaders.class));
         }
     }
 }

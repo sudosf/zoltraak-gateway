@@ -1,7 +1,6 @@
 package com.zoltraak.gateway.features.proxy;
 
-import com.zoltraak.gateway.domain.models.ollama.*;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -12,7 +11,10 @@ public class OllamaProxyController {
 
     public static final String BASE_PATH = "/api";
     public static final String CHAT = "/chat";
+    public static final String CHAT_COMPLETIONS = "/chat/completions";
     public static final String GENERATE = "/generate";
+    public static final String EMBED = "/embed";
+    public static final String SHOW = "/show";
     public static final String VERSION = "/version";
     public static final String PS = "/ps";
     public static final String TAGS = "/tags";
@@ -23,28 +25,45 @@ public class OllamaProxyController {
         this.ollamaProxyService = ollamaProxyService;
     }
 
-    @PostMapping(value = CHAT, produces = "application/x-ndjson")
-    public Flux<OllamaChatResponse> chat(@RequestBody OllamaChatRequest request) {
-        return ollamaProxyService.forwardChat(request);
+    // TODO revisit media types
+    @PostMapping(value = CHAT, produces = {"application/x-ndjson", "text/event-stream", "application/json"})
+    public Flux<byte[]> chat(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
+        return ollamaProxyService.forwardChat(request, headers);
     }
 
-    @PostMapping(value = GENERATE, produces = "application/x-ndjson")
-    public Flux<OllamaGenerateResponse> generate(@RequestBody OllamaGenerateRequest request) {
-        return ollamaProxyService.forwardGenerate(request);
+    // TODO revisit function name
+    @PostMapping(value = CHAT_COMPLETIONS, produces = {"application/x-ndjson", "text/event-stream", "application/json"})
+    public Flux<byte[]> openAiChat(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
+        return ollamaProxyService.forwardChat(request, headers);
+    }
+
+    @PostMapping(value = GENERATE, produces = {"application/x-ndjson", "text/event-stream", "application/json"})
+    public Flux<byte[]> generate(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
+        return ollamaProxyService.forwardGenerate(request, headers);
+    }
+
+    @PostMapping(EMBED)
+    public Mono<byte[]> embed(@RequestBody Flux<byte[]> request, @RequestHeader HttpHeaders headers) {
+        return ollamaProxyService.embed(request, headers);
+    }
+
+    @PostMapping(SHOW)
+    public Mono<byte[]> show(@RequestBody Flux<byte[]> request, @RequestHeader HttpHeaders headers) {
+        return ollamaProxyService.show(request, headers);
     }
 
     @GetMapping(TAGS)
-    public Mono<ResponseEntity<OllamaModelsResponse>> getTags() {
-        return ollamaProxyService.getTags().map(ResponseEntity::ok);
+    public Mono<byte[]> getTags(HttpHeaders headers) {
+        return ollamaProxyService.getTags(headers);
     }
 
     @GetMapping(VERSION)
-    public Mono<ResponseEntity<OllamaVersionResponse>> getVersion() {
-        return ollamaProxyService.getVersion().map(ResponseEntity::ok);
+    public Mono<byte[]> getVersion(HttpHeaders headers) {
+        return ollamaProxyService.getVersion(headers);
     }
 
     @GetMapping(PS)
-    public Mono<ResponseEntity<OllamaModelsResponse>> getPs() {
-        return ollamaProxyService.getPs().map(ResponseEntity::ok);
+    public Mono<byte[]> getPs(HttpHeaders headers) {
+        return ollamaProxyService.getPs(headers);
     }
 }

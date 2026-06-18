@@ -1,18 +1,16 @@
 package com.zoltraak.gateway.features.proxy;
 
 import com.zoltraak.gateway.config.SecurityConfig;
-import com.zoltraak.gateway.domain.models.ollama.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -30,93 +28,115 @@ class OllamaProxyControllerTest {
 
     @Test
     void chat_returns200_withNdjsonContentType() {
-        OllamaChatRequest request = new OllamaChatRequest(
-                "llama3", List.of(), false, false
-        );
+        byte[] requestBody = "{\"model\":\"llama3\",\"messages\":[],\"stream\":false}".getBytes();
+        byte[] responseBody = "{\"model\":\"llama3\",\"done\":true}".getBytes();
 
-        OllamaChatResponse response = new OllamaChatResponse(
-                "llama3", null, null,
-                true, null, null,
-                null, null, null,
-                null, null
-        );
-
-        when(ollamaProxyService.forwardChat(request)).thenReturn(Flux.just(response));
+        when(ollamaProxyService.forwardChat(any(), any(HttpHeaders.class)))
+                .thenReturn(Flux.just(responseBody));
 
         webTestClient.post()
                 .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.CHAT)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
+                .bodyValue(requestBody)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentTypeCompatibleWith(MediaType.valueOf("application/x-ndjson"));
 
-        verify(ollamaProxyService).forwardChat(any(OllamaChatRequest.class));
+        verify(ollamaProxyService).forwardChat(any(), any(HttpHeaders.class));
     }
 
     @Test
     void generate_returns200_withNdjsonContentType() {
-        OllamaGenerateRequest request = new OllamaGenerateRequest(
-                "llama3", "hello", List.of(), false, false, null
-        );
+        byte[] requestBody = "{\"model\":\"llama3\",\"prompt\":\"hello\",\"stream\":false}".getBytes();
+        byte[] responseBody = "{\"model\":\"llama3\",\"response\":\"response text\",\"done\":true}".getBytes();
 
-        OllamaGenerateResponse response = new OllamaGenerateResponse(
-                "llama3", null, "response text",
-                null, true, null
-        );
-
-        when(ollamaProxyService.forwardGenerate(request)).thenReturn(Flux.just(response));
+        when(ollamaProxyService.forwardGenerate(any(), any(HttpHeaders.class)))
+                .thenReturn(Flux.just(responseBody));
 
         webTestClient.post()
                 .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.GENERATE)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(request)
+                .bodyValue(requestBody)
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentTypeCompatibleWith(MediaType.valueOf("application/x-ndjson"));
 
-        verify(ollamaProxyService).forwardGenerate(any(OllamaGenerateRequest.class));
+        verify(ollamaProxyService).forwardGenerate(any(), any(HttpHeaders.class));
+    }
+
+    @Test
+    void embed_returns200() {
+        byte[] requestBody = "{\"model\":\"embeddinggemma\",\"input\":\"hello\"}".getBytes();
+        byte[] responseBody = "{\"model\":\"embeddinggemma\",\"embeddings\":[[0.01,0.02]]}".getBytes();
+
+        when(ollamaProxyService.embed(any(), any(HttpHeaders.class))).thenReturn(Mono.just(responseBody));
+
+        webTestClient.post()
+                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.EMBED)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody)
+                .exchange()
+                .expectStatus().isOk();
+
+        verify(ollamaProxyService).embed(any(), any(HttpHeaders.class));
+    }
+
+    @Test
+    void show_returns200() {
+        byte[] requestBody = "{\"model\":\"llama3\"}".getBytes();
+        byte[] responseBody = "{\"modelfile\":\"FROM llama3\"}".getBytes();
+
+        when(ollamaProxyService.show(any(), any(HttpHeaders.class))).thenReturn(Mono.just(responseBody));
+
+        webTestClient.post()
+                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.SHOW)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(requestBody)
+                .exchange()
+                .expectStatus().isOk();
+
+        verify(ollamaProxyService).show(any(), any(HttpHeaders.class));
     }
 
     @Test
     void getTags_returns200() {
-        OllamaModelsResponse response = new OllamaModelsResponse(List.of());
+        byte[] response = "{\"models\":[]}".getBytes();
 
-        when(ollamaProxyService.getTags()).thenReturn(Mono.just(response));
+        when(ollamaProxyService.getTags(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
         webTestClient.get()
                 .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.TAGS)
                 .exchange()
                 .expectStatus().isOk();
 
-        verify(ollamaProxyService).getTags();
+        verify(ollamaProxyService).getTags(any(HttpHeaders.class));
     }
 
     @Test
     void getVersion_returns200() {
-        OllamaVersionResponse response = new OllamaVersionResponse("0.1.0");
+        byte[] response = "{\"version\":\"0.1.0\"}".getBytes();
 
-        when(ollamaProxyService.getVersion()).thenReturn(Mono.just(response));
+        when(ollamaProxyService.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
         webTestClient.get()
                 .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.VERSION)
                 .exchange()
                 .expectStatus().isOk();
 
-        verify(ollamaProxyService).getVersion();
+        verify(ollamaProxyService).getVersion(any(HttpHeaders.class));
     }
 
     @Test
     void getPs_returns200() {
-        OllamaModelsResponse response = new OllamaModelsResponse(List.of());
+        byte[] response = "{\"models\":[]}".getBytes();
 
-        when(ollamaProxyService.getPs()).thenReturn(Mono.just(response));
+        when(ollamaProxyService.getPs(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
         webTestClient.get()
                 .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.PS)
                 .exchange()
                 .expectStatus().isOk();
 
-        verify(ollamaProxyService).getPs();
+        verify(ollamaProxyService).getPs(any(HttpHeaders.class));
     }
 }
