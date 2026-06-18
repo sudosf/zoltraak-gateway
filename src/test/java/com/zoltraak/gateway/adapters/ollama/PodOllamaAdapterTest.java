@@ -19,7 +19,6 @@ import java.io.IOException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-// TODO create and handle ollama exceptions
 class PodOllamaAdapterTest {
 
     private MockWebServer mockWebServer;

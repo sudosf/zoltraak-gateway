@@ -6,7 +6,8 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - RUNPOD_API_KEY=${RUNPOD_API_KEY}
       - VAST_AI_API_KEY=${VAST_AI_API_KEY}
-      - OPEN_WEB_UI_API_KEY=${OPEN_WEB_UI_API_KEY}
+      - GATEWAY_API_KEY=${GATEWAY_API_KEY}
     restart: unless-stopped
     stop_grace_period: 35s
