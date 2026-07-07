@@ -1,6 +1,7 @@
 package com.zoltraak.gateway.exception;
 
 import com.zoltraak.gateway.adapters.gpu.ProviderException;
+import com.zoltraak.gateway.adapters.ollama.OllamaException;
 import com.zoltraak.gateway.domain.enums.GatewayErrorCode;
 import com.zoltraak.gateway.domain.exception.GatewayServiceException;
 import com.zoltraak.gateway.domain.exception.PodNotReadyException;
@@ -47,6 +48,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(mapToHttpStatus(ex.getGatewayErrorCode()))
                 .body(GatewayResponse.error(ex.getGatewayErrorCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(OllamaException.class)
+    public ResponseEntity<GatewayResponse<Void>> handleOllamaException(OllamaException ex) {
+        log.error("Ollama error code = {} message = {}",
+                ex.getStatusCode(), ExceptionUtils.getRootCauseMessage(ex)
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(GatewayResponse.error(
+                        GatewayErrorCode.INTERNAL_ERROR,
+                        "Ollama service is currently unavailable"));
     }
 
     @ExceptionHandler(ServerWebInputException.class)
