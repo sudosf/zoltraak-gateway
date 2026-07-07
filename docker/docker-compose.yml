@@ -9,5 +9,7 @@ services:
       - RUNPOD_API_KEY=${RUNPOD_API_KEY}
       - VAST_AI_API_KEY=${VAST_AI_API_KEY}
       - GATEWAY_API_KEY=${GATEWAY_API_KEY}
+      - ACTIVE_PROVIDER=${ACTIVE_PROVIDER}
+      - IDLE_CHECK_TIMEOUT_MINUTES=${IDLE_CHECK_TIMEOUT_MINUTES}
     restart: unless-stopped
     stop_grace_period: 35s

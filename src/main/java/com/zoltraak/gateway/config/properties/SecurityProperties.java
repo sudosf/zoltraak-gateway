@@ -6,10 +6,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @Data
 @ConfigurationProperties(prefix = "zoltraak.security")
 public class SecurityProperties {
-    private OpenWebUiConfig openWebui;
-
-    @Data
-    public static class OpenWebUiConfig {
-        private String apiKey;
-    }
+    private String apiKey;
 }

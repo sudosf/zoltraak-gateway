@@ -30,7 +30,7 @@ public class AuthFilter implements WebFilter {
         }
 
         String header = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        String expected = "Bearer " + securityProperties.getOpenWebui().getApiKey();
+        String expected = "Bearer " + securityProperties.getApiKey();
 
         if (expected.equals(header)) {
             return chain.filter(exchange);

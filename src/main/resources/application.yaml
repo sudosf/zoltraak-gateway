@@ -10,7 +10,7 @@ server:
 
 zoltraak:
   provider:
-    active: runpod
+    active: ${ACTIVE_PROVIDER:runpod}
     response-timeout-seconds: 30
     id-cache-hours: 3
     vastai:
@@ -27,7 +27,7 @@ zoltraak:
       timeout-seconds: 15
 
   gpu:
-    idle-check-timeout-minutes: 10
+    idle-check-timeout-minutes: ${IDLE_CHECK_TIMEOUT_MINUTES:15}
     idle-check-interval-seconds: 30
     warmup-timeout-minutes: 3
     warmup-poll-interval-seconds: 5
@@ -38,6 +38,9 @@ zoltraak:
   queue:
     max-wait-minutes: 5
     expiry-check-interval-seconds: 30
+
+  security:
+    api-key: ${GATEWAY_API_KEY}
 
 logging:
   level:
