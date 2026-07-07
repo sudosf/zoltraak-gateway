@@ -27,7 +27,7 @@ zoltraak:
       timeout-seconds: 15
 
   gpu:
-    idle-check-timeout-minutes: 15
+    idle-check-timeout-minutes: 10
     idle-check-interval-seconds: 30
     warmup-timeout-minutes: 3
     warmup-poll-interval-seconds: 5
