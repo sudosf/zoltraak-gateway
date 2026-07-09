@@ -2,6 +2,7 @@ package com.zoltraak.gateway.adapters.gpu.runpod;
 
 import com.zoltraak.gateway.adapters.gpu.GpuProvider;
 import com.zoltraak.gateway.adapters.gpu.ProviderException;
+import com.zoltraak.gateway.adapters.gpu.runpod.model.RunpodCreatePodRequest;
 import com.zoltraak.gateway.adapters.gpu.runpod.model.RunpodPodResponse;
 import com.zoltraak.gateway.annotations.Adapter;
 import com.zoltraak.gateway.config.properties.OllamaProperties;
@@ -16,6 +17,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -24,19 +26,25 @@ import java.util.function.Function;
 @Slf4j
 @Adapter
 public class RunpodAdapter implements GpuProvider {
+
+    private final String BASE_PATH = "/pods";
+
     private final WebClient webClient;
     private final OllamaProperties ollamaProperties;
     private final ProviderProperties providerProperties;
     private final AtomicReference<Mono<String>> podId;
+    private final RunpodAdapterMapper runpodAdapterMapper;
 
     public RunpodAdapter(
             @Qualifier("runpodWebClient") WebClient webClient,
             OllamaProperties ollamaProperties,
-            ProviderProperties providerProperties) {
+            ProviderProperties providerProperties,
+            RunpodAdapterMapper runpodAdapterMapper) {
         this.webClient = webClient;
         this.ollamaProperties = ollamaProperties;
         this.providerProperties = providerProperties;
         this.podId = new AtomicReference<>();
+        this.runpodAdapterMapper = runpodAdapterMapper;
     }
 
     @PostConstruct
@@ -46,17 +54,33 @@ public class RunpodAdapter implements GpuProvider {
 
     @Override
     public Mono<Void> start() {
+
         return this.podId.get()
                 .flatMap(id -> {
                     log.info("Runpod starting pod with id = {}", id);
-                    String path = "/pods/%s/start".formatted(id);
-                    return postAsMono(path)
-                            .doOnSuccess(_ -> log.debug("Runpod start completed for pod with id = {}", id))
-                            .doOnError(e ->
-                                    log.debug("Runpod start failed for pod with id = {}, error = {}",
-                                            id, ExceptionUtils.getRootCauseMessage(e))
-                            );
-                });
+                    String path = "%s/%s/start".formatted(BASE_PATH, id);
+                    return postAsMono(path);
+                })
+                .onErrorResume(ProviderException.class, ex -> {
+                    if (ex.getHttpStatusCode() == 404) {
+                        log.info("Runpod no active pod found, renting new pod...");
+                        return rentNewPod();
+                    }
+
+                    log.info("Runpod start failed, deleting and renting new pod...");
+                    return this.podId.get()
+                            .flatMap(this::deletePod)
+                            .onErrorResume(error -> {
+                                log.warn("Delete failed during recovery, proceeding to renting a new pod, error = {}",
+                                        ExceptionUtils.getRootCauseMessage(error));
+                                return Mono.empty();
+                            })
+                            .then(rentNewPod());
+                })
+                .doOnSuccess(_ -> log.debug("Runpod start/create completed"))
+                .doOnError(e ->
+                        log.debug("Runpod start/create failed, error = {}", ExceptionUtils.getRootCauseMessage(e))
+                );
     }
 
     @Override
@@ -64,7 +88,7 @@ public class RunpodAdapter implements GpuProvider {
         return this.podId.get()
                 .flatMap(id -> {
                     log.info("Runpod stopping pod with id = {}", id);
-                    String path = "/pods/%s/stop".formatted(id);
+                    String path = "%s/%s/stop".formatted(BASE_PATH, id);
                     return postAsMono(path)
                             .doOnSuccess(_ -> log.debug("Runpod stop completed for pod with id = {}", id))
                             .doOnError(e ->
@@ -107,27 +131,17 @@ public class RunpodAdapter implements GpuProvider {
                             if (ex.getHttpStatusCode() != 404) return Mono.error(ex);
 
                             log.warn("Runpod pod id not found, refreshing cache");
-                            this.podId.set(fetchPodId());
-                            return this.podId.get().flatMap(this::fetchPodById);
+                            Mono<String> cachedId = this.podId.get();
+                            this.podId.set(cachedId);
+
+                            return cachedId.flatMap(this::fetchPodById);
                         }));
     }
 
-    private Mono<RunpodPodResponse> fetchPodById(String id) {
-        return webClient.get()
-                .uri("/pods/%s".formatted(id))
-                .retrieve()
-                .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
-                        handleErrorResponse())
-                .bodyToMono(RunpodPodResponse.class)
-                .doOnSubscribe(_ -> log.debug("Runpod GET fetching pod by id = {}", id))
-                .doOnError(e -> log.debug("Runpod GET failed, id = {}, error = {}",
-                        id, ExceptionUtils.getRootCauseMessage(e))
-                );
-    }
-
+    // TODO cache this with util
     private Mono<String> fetchPodId() {
         return webClient.get()
-                .uri("/pods")
+                .uri(BASE_PATH)
                 .retrieve()
                 .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
                         handleErrorResponse())
@@ -143,6 +157,57 @@ public class RunpodAdapter implements GpuProvider {
                 );
     }
 
+    private Mono<RunpodPodResponse> fetchPodById(String id) {
+        return webClient.get()
+                .uri("%s/{id}".formatted(BASE_PATH), id)
+                .retrieve()
+                .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(),
+                        handleErrorResponse())
+                .bodyToMono(RunpodPodResponse.class)
+                .doOnSubscribe(_ -> log.debug("Runpod GET fetching pod by id = {}", id))
+                .doOnError(e -> log.debug("Runpod GET failed, id = {}, error = {}",
+                        id, ExceptionUtils.getRootCauseMessage(e))
+                );
+    }
+
+    private Mono<Void> deletePod(String podId) {
+        return webClient.delete()
+                .uri("%s/{podId}".formatted(BASE_PATH), podId)
+                .retrieve()
+                .toBodilessEntity()
+                .then();
+    }
+
+    private Mono<String> createPod() {
+        RunpodCreatePodRequest body = runpodAdapterMapper.toRunpodCreateRequest(providerProperties.getRunpod().getCreate());
+
+        // TODO consolidate with postAsMono
+        return webClient.post()
+                .uri(BASE_PATH)
+                .bodyValue(body)
+                .retrieve()
+                .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(), handleErrorResponse())
+                .bodyToMono(RunpodPodResponse.class)
+                .flatMap(pod -> {
+                    log.info("Runpod rented new pod [{}]. region: {}, Cost: ${}/hr",
+                            pod.machine().gpuTypeId(),
+                            pod.machine().dataCenterId(),
+                            pod.costPerHr());
+
+                    return Mono.just(pod.id());
+                });
+    }
+
+    private Mono<Void> rentNewPod() {
+        return createPod()
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(3)))
+                .flatMap(id -> {
+                    Mono<String> cachedId = cachedId(id);
+                    podId.set(cachedId);
+                    return Mono.empty();
+                });
+    }
+
     private Mono<Void> postAsMono(String path) {
         return webClient.post()
                 .uri(path)
@@ -156,5 +221,14 @@ public class RunpodAdapter implements GpuProvider {
         return response -> response.bodyToMono(String.class)
                 .defaultIfEmpty("No response body")
                 .map(body -> new ProviderException(GpuProviderType.RUNPOD, response.statusCode().value(), body));
+    }
+
+    private Mono<String> cachedId(String id) {
+        return Mono.just(id)
+                .cache(
+                        _ -> Duration.ofHours(providerProperties.getIdCacheHours()),
+                        _ -> Duration.ZERO,
+                        () -> Duration.ZERO
+                );
     }
 }
