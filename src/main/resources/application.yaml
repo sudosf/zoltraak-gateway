@@ -11,12 +11,24 @@ server:
 zoltraak:
   provider:
     active: ${ACTIVE_PROVIDER:runpod}
-    response-timeout-seconds: 30
+    response-timeout-seconds: 45
     id-cache-hours: 3
     vastai:
       base-url: https://console.vast.ai
     runpod:
       base-url: https://rest.runpod.io/v1
+      create:
+        cloud-type: ${RUNPOD_CLOUD_TYPE:SECURE}
+        compute-type: ${RUNPOD_COMPUTE_TYPE:GPU}
+        gpu-type-ids: ${RUNPOD_GPU_TYPE_IDS}
+        gpu-count: ${RUNPOD_GPU_COUNT}
+        gpu-type-priority: ${RUNPOD_GPU_PRIORITY}
+        image-name: ${RUNPOD_IMAGE_NAME}
+        name: ${RUNPOD_NAME}
+        network-volume-id: ${RUNPOD_NETWORK_VOLUME_ID}
+        ports: ${RUNPOD_PORTS}
+        volume-mount-path: ${RUNPOD_VOLUME_MOUNT_PATH}
+        container-disk-in-gb: ${RUNPOD_CONTAINER_DISK_IN_GB:5}
 
   ollama:
     gpu-pod:
