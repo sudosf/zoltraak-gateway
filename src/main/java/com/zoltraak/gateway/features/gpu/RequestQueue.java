@@ -11,13 +11,14 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Slf4j
 @Component
 public class RequestQueue {
 
-    private final ConcurrentLinkedQueue<QueuedRequest> queue = new ConcurrentLinkedQueue<>();
+    private final Queue<QueuedRequest> queue = new ConcurrentLinkedQueue<>();
 
     public void enqueue(QueuedRequest request) {
         queue.add(request);
