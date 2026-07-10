@@ -1,6 +1,7 @@
 package com.zoltraak.gateway.features.proxy;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -25,18 +26,17 @@ public class OllamaProxyController {
         this.ollamaProxyService = ollamaProxyService;
     }
 
-    // TODO revisit media types
-    @PostMapping(value = CHAT, produces = {"application/x-ndjson", "text/event-stream", "application/json"})
+    @PostMapping(value = CHAT, produces = {MediaType.TEXT_EVENT_STREAM_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public Flux<byte[]> chat(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
         return ollamaProxyService.forwardChat(request, headers);
     }
 
-    @PostMapping(value = CHAT_COMPLETIONS, produces = {"application/x-ndjson", "text/event-stream", "application/json"})
+    @PostMapping(value = CHAT_COMPLETIONS, produces = {MediaType.TEXT_EVENT_STREAM_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public Flux<byte[]> chatCompletions(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
         return ollamaProxyService.forwardChat(request, headers);
     }
 
-    @PostMapping(value = GENERATE, produces = {"application/x-ndjson", "text/event-stream", "application/json"})
+    @PostMapping(value = GENERATE, produces = {MediaType.APPLICATION_NDJSON_VALUE, MediaType.APPLICATION_JSON_VALUE})
     public Flux<byte[]> generate(@RequestBody Flux<byte[]> request, HttpHeaders headers) {
         return ollamaProxyService.forwardGenerate(request, headers);
     }
