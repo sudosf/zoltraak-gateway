@@ -21,7 +21,6 @@ public class RequestLoggingFilter implements WebFilter {
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         log.info("{} {}", request.getMethod(), request.getPath());
-        // TODO: log userId from JWT once auth is implemented
         return chain.filter(exchange);
     }
 }

@@ -26,7 +26,8 @@ done
 echo "Ollama is up"
 
 echo "=== Pulling models ==="
+ollama pull huihui_ai/gemma-4-abliterated:12b
 ollama pull Tohur/natsumura-storytelling-rp-llama-3.1
-ollaam pullqwen3-coder:30b
+ollama pull qwen3-coder:30b
 
 echo "=== Done ==="

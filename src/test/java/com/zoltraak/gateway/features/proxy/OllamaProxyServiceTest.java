@@ -3,6 +3,7 @@ package com.zoltraak.gateway.features.proxy;
 
 import com.zoltraak.gateway.adapters.ollama.OllamaClient;
 import com.zoltraak.gateway.domain.enums.PodStatus;
+import com.zoltraak.gateway.domain.exception.GatewayServiceException;
 import com.zoltraak.gateway.features.gpu.GpuLifecycleManager;
 import com.zoltraak.gateway.features.gpu.RequestQueue;
 import com.zoltraak.gateway.features.gpu.model.QueuedRequest;
@@ -61,23 +62,43 @@ class OllamaProxyServiceTest {
 
             verify(gpuLifecycleManager).resetIdleTimer();
         }
+    }
+
+    @Nested
+    class WhenPodIsDegraded {
 
         @Test
-        void whenDegraded_operationProceeds() {
+        void getVersion_isNoOps_andThrowsGatewayServiceException() {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.DEGRADED);
-            when(ollamaClient.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
             StepVerifier.create(service.getVersion(new HttpHeaders()))
-                    .expectNext(response)
-                    .verifyComplete();
+                    .expectError(GatewayServiceException.class)
+                    .verify();
+
+            verifyNoInteractions(ollamaClient);
+            verify(gpuLifecycleManager, never()).requestStart();
+        }
+
+        @Test
+        void forwardChat_isNoOps_andThrowsGatewayServiceException() {
+            when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.DEGRADED);
+            byte[] request = "{}".getBytes();
+
+            StepVerifier.create(service.forwardChat(Flux.just(request), new HttpHeaders()))
+                    .expectError(GatewayServiceException.class)
+                    .verify();
+
+            verifyNoInteractions(ollamaClient);
+            verify(gpuLifecycleManager, never()).requestStart();
         }
 
         @Test
         void whenDegraded_doesNotResetIdleTimer() {
             when(gpuLifecycleManager.getStatus()).thenReturn(PodStatus.DEGRADED);
-            when(ollamaClient.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
-            StepVerifier.create(service.getVersion(new HttpHeaders())).expectNextCount(1).verifyComplete();
+            StepVerifier.create(service.getVersion(new HttpHeaders()))
+                    .expectError(GatewayServiceException.class)
+                    .verify();
 
             verify(gpuLifecycleManager, never()).resetIdleTimer();
         }

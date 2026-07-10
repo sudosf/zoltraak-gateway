@@ -27,7 +27,7 @@ class OllamaProxyControllerTest {
     private OllamaProxyService ollamaProxyService;
 
     @Test
-    void chat_returns200_withNdjsonContentType() {
+    void chat_returns200_withEventStreamContentType() {
         byte[] requestBody = "{\"model\":\"llama3\",\"messages\":[],\"stream\":false}".getBytes();
         byte[] responseBody = "{\"model\":\"llama3\",\"done\":true}".getBytes();
 
@@ -40,7 +40,7 @@ class OllamaProxyControllerTest {
                 .bodyValue(requestBody)
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().contentTypeCompatibleWith(MediaType.valueOf("application/x-ndjson"));
+                .expectHeader().contentTypeCompatibleWith(MediaType.valueOf(MediaType.TEXT_EVENT_STREAM_VALUE));
 
         verify(ollamaProxyService).forwardChat(any(), any(HttpHeaders.class));
     }
@@ -59,7 +59,7 @@ class OllamaProxyControllerTest {
                 .bodyValue(requestBody)
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().contentTypeCompatibleWith(MediaType.valueOf("application/x-ndjson"));
+                .expectHeader().contentTypeCompatibleWith(MediaType.valueOf(MediaType.APPLICATION_NDJSON_VALUE));
 
         verify(ollamaProxyService).forwardGenerate(any(), any(HttpHeaders.class));
     }

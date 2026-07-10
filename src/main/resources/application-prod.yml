@@ -4,6 +4,9 @@ zoltraak:
       api-key: ${VAST_AI_API_KEY}
     runpod:
       api-key: ${RUNPOD_API_KEY}
-  security:
-    open-webui:
-      api-key: ${GATEWAY_API_KEY}
+
+springdoc:
+  api-docs:
+    enabled: false
+scalar:
+  enabled: false
