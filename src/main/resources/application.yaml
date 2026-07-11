@@ -12,24 +12,26 @@ zoltraak:
   provider:
     active: ${ACTIVE_PROVIDER:runpod}
     response-timeout-seconds: 45
-    id-cache-hours: 3
+    id-cache-hours: 1
     vastai:
       base-url: https://console.vast.ai
     runpod:
       base-url: https://rest.runpod.io/v1
       create:
-        cloud-type: ${RUNPOD_CLOUD_TYPE:SECURE}
-        compute-type: ${RUNPOD_COMPUTE_TYPE:GPU}
-        gpu-type-ids: ${RUNPOD_GPU_TYPE_IDS}
-        gpu-count: ${RUNPOD_GPU_COUNT}
-        gpu-type-priority: ${RUNPOD_GPU_PRIORITY}
-        image-name: ${RUNPOD_IMAGE_NAME}
-        name: ${RUNPOD_NAME}
-        network-volume-id: ${RUNPOD_NETWORK_VOLUME_ID}
-        ports: ${RUNPOD_PORTS}
-        volume-mount-path: ${RUNPOD_VOLUME_MOUNT_PATH}
-        container-disk-in-gb: ${RUNPOD_CONTAINER_DISK_IN_GB:5}
-
+        imageName: "runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04"
+        interruptible: false
+        supportPublicIp: true
+        globalNetworking: true
+        minVCPUPerGPU: 2
+        minRAMPerGPU: 8
+        vcpuCount: 2
+        minDiskBandwidthMBps: 100
+        minDownloadMbps: 100
+        minUploadMbps: 100
+        volumeInGb: 20
+        dataCenterPriority: "availability"
+        dataCenterIds: [ ]
+        countryCodes: [ ]
   ollama:
     gpu-pod:
       port: 11434

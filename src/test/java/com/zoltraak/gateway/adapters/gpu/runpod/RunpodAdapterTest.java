@@ -9,22 +9,24 @@ import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.*;
-import org.mapstruct.factory.Mappers;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.Exceptions;
 import reactor.test.StepVerifier;
 
 import java.io.IOException;
+import java.time.Duration;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class RunpodAdapterTest {
+    private final String POD_ID = "pod-12345";
+
     private MockWebServer mockWebServer;
     private RunpodAdapter adapter;
     private OllamaProperties ollamaProperties;
     private ProviderProperties providerProperties;
-    private RunpodAdapterMapper mapper;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -39,26 +41,24 @@ class RunpodAdapterTest {
         this.ollamaProperties = mock(OllamaProperties.class);
         when(ollamaProperties.getGpuPod()).thenReturn(gpuPodConfig);
 
-        providerProperties = new ProviderProperties();
-        providerProperties.setIdCacheHours(1);
+        ProviderProperties.RunPod.Create create = mock(ProviderProperties.RunPod.Create.class);
+        ProviderProperties.RunPod runPod = mock(ProviderProperties.RunPod.class);
+        when(runPod.getCreate()).thenReturn(create);
+
+        this.providerProperties = mock(ProviderProperties.class);
+        when(providerProperties.getRunpod()).thenReturn(runPod);
 
         WebClient webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .build();
 
-        mapper = Mappers.getMapper(RunpodAdapterMapper.class);
-
-        adapter = new RunpodAdapter(webClient, ollamaProperties, providerProperties, mapper);
+        adapter = new RunpodAdapter(webClient, ollamaProperties, providerProperties);
         adapter.init();
     }
 
     @AfterEach
     void tearDown() throws IOException {
         mockWebServer.shutdown();
-    }
-
-    private void enqueuePodListPage() {
-        enqueuePodListPage("pod-12345");
     }
 
     private void enqueuePodListPage(String id) {
@@ -77,11 +77,11 @@ class RunpodAdapterTest {
                 .setBody(json));
     }
 
-    private void enqueuePodResponse(String desiredStatus) {
-        enqueuePodResponse(desiredStatus, "pod-12345");
+    private void enqueuePodListPage() {
+        enqueuePodListPage(POD_ID);
     }
 
-    private void enqueuePodResponse(String desiredStatus, String id) {
+    private void enqueuePodResponse(String desiredStatus, String podId) {
         String statusValue = desiredStatus.equals("null")
                 ? "null"
                 : "\"" + desiredStatus + "\"";
@@ -89,14 +89,23 @@ class RunpodAdapterTest {
         String json = """
                 {
                     "id": "%s",
-                    "desiredStatus": %s
+                    "desiredStatus": %s,
+                    "costPerHr": 0.5,
+                    "machine": {
+                        "gpuTypeId": "RTX3090",
+                        "dataCenterId": "US-1"
+                    }
                 }
-                """.formatted(id, statusValue);
+                """.formatted(podId, statusValue);
 
         mockWebServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody(json));
+    }
+
+    private void enqueuePodResponse(String desiredStatus) {
+        enqueuePodResponse(desiredStatus, POD_ID);
     }
 
     @Nested
@@ -156,7 +165,7 @@ class RunpodAdapterTest {
                     .baseUrl("http://localhost:" + localServer.getPort())
                     .build();
 
-            RunpodAdapter isolatedAdapter = new RunpodAdapter(localClient, ollamaProperties, providerProperties, mapper);
+            RunpodAdapter isolatedAdapter = new RunpodAdapter(localClient, ollamaProperties, providerProperties);
             isolatedAdapter.init();
             return isolatedAdapter;
         }
@@ -182,6 +191,78 @@ class RunpodAdapterTest {
             assertThat(request.getMethod()).isEqualTo("POST");
             assertThat(request.getPath()).isEqualTo("/pods/pod-12345/start");
         }
+
+        @Nested
+        class WhenStartFails {
+
+            @Test
+            void rentsNewPod_whenPodNotFound() throws InterruptedException {
+                mockWebServer.enqueue(new MockResponse().setResponseCode(404));
+                enqueuePodResponse("RUNNING");
+
+                StepVerifier.create(adapter.start())
+                        .verifyComplete();
+
+                mockWebServer.takeRequest();
+                RecordedRequest startRequest = mockWebServer.takeRequest();
+                RecordedRequest createRequest = mockWebServer.takeRequest();
+
+                assertThat(startRequest.getPath()).isEqualTo("%s/%s/start".formatted(RunpodAdapter.BASE_PATH, POD_ID));
+                assertThat(createRequest.getPath()).isEqualTo(RunpodAdapter.BASE_PATH);
+            }
+
+            @Test
+            @Disabled("pending optimization for retry delay")
+            void propagatesError_whenRentingNewPodExhaustsRetries() {
+                mockWebServer.enqueue(new MockResponse().setResponseCode(404));
+                for (int i = 0; i < 4; i++) {
+                    mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+                }
+
+                StepVerifier.create(adapter.start())
+                        .expectErrorMatches(throwable ->
+                                Exceptions.isRetryExhausted(throwable)
+                                        && throwable.getCause() instanceof ProviderException)
+                        .verify(Duration.ofSeconds(10));
+            }
+
+            @Test
+            void deletesAndRentsNewPod_whenStartFails_andDeleteSucceeds() {
+                mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+                mockWebServer.enqueue(new MockResponse().setResponseCode(200));
+                enqueuePodResponse("RUNNING");
+
+                StepVerifier.create(adapter.start())
+                        .verifyComplete();
+            }
+
+            @Test
+            void rentsNewPod_whenStartFails_andDeleteAlsoFails() {
+                mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+                mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+                enqueuePodResponse("RUNNING");
+
+                StepVerifier.create(adapter.start())
+                        .verifyComplete();
+            }
+
+            @Test
+            @Disabled("pending optimization for retry delay")
+            void propagatesError_whenDeleteSucceeds_whenRentingNewPodExhaustsRetries() {
+                mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+                mockWebServer.enqueue(new MockResponse().setResponseCode(200));
+                for (int i = 0; i < 4; i++) {
+                    mockWebServer.enqueue(new MockResponse().setResponseCode(500));
+                }
+
+                StepVerifier.create(adapter.start())
+                        .expectErrorMatches(throwable ->
+                                Exceptions.isRetryExhausted(throwable)
+                                        && throwable.getCause() instanceof ProviderException)
+                        .verify(Duration.ofSeconds(10));
+            }
+        }
+
     }
 
     @Nested
@@ -292,7 +373,6 @@ class RunpodAdapterTest {
         }
 
         @Test
-        @Disabled("pending auto rental tests")
         void recoversViaRefresh_whenPodWasDeletedExternally() {
             mockWebServer.enqueue(new MockResponse().setResponseCode(404));
             enqueuePodListPage("pod-67890");
@@ -305,7 +385,6 @@ class RunpodAdapterTest {
         }
 
         @Test
-        @Disabled("pending auto rental tests")
         void throwsProviderException_whenPodWasDeletedExternally() {
             mockWebServer.enqueue(new MockResponse().setResponseCode(404));
             mockWebServer.enqueue(new MockResponse()

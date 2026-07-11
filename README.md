@@ -13,15 +13,15 @@ the [Project Board](https://github.com/users/sudosf/projects/2)
 
 - Java 25
 - Maven 3.9+
-- A Vast.ai account with credits
-- Ollama setup and running on [Vast.ai](https://vast.ai) pod
+- A Runpod / Vast.ai account with credits
+- Ollama setup and running on [Runpod](https://console.runpod.io/deploy) / [Vast.ai](https://vast.ai) pod
 
 ## Quick start
 
 ### Requirements
 
 - [Docker](https://docs.docker.com/engine/install/)
-- A [Vast.ai](https://vast.ai) account and API key
+- A [Runpod](https://console.runpod.io/deploy) / [Vast.ai](https://vast.ai) account and API key
 
 ### Step 1: Download the required files
 
@@ -41,10 +41,10 @@ wget -O .env https://github.com/sudosf/zoltraak-gateway/releases/latest/download
 
 ### Step 2: Configure your environment
 
-Populate your `.env` with your environment variables:
+Populate your `.env` with your environment variables (see `example.env` for reference):
 
 ```
-VASTAI_API_KEY=your_key_here
+RUNPOD_API_KEY=your_key_here
 ```
 
 ### Step 3: Start the gateway

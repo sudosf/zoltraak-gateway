@@ -12,33 +12,45 @@ public class ProviderProperties {
     private GpuProviderType active;
     private Integer responseTimeoutSeconds;
     private Integer idCacheHours;
-    private RunPodConfig runpod;
-    private VastAiConfig vastAi;
+    private RunPod runpod;
+    private VastAi vastAi;
 
     @Data
-    public static class RunPodConfig {
+    public static class RunPod {
         private String apiKey;
         private String baseUrl;
-        private CreateProperties create;
+        private Create create = new Create();
 
         @Data
-        public static class CreateProperties {
-            private Integer containerDiskInGb;
-            private String cloudType;
-            private String computeType;
+        public static class Create {
             private List<String> gpuTypeIds;
-            private Integer gpuCount;
-            private String gpuTypePriority;
+            private List<String> ports;
             private String imageName;
             private String name;
-            private String networkVolumeId;
-            private List<String> ports;
+            private Integer gpuCount;
+            private Integer volumeInGb;
+            private Integer containerDiskInGb;
             private String volumeMountPath;
+            private Boolean interruptible;
+            private Boolean supportPublicIp;
+            private Boolean globalNetworking;
+            private String templateId;
+            private String networkVolumeId;
+            private List<String> dataCenterIds;
+            private List<String> countryCodes;
+            private String gpuTypePriority;
+            private String dataCenterPriority;
+            private Integer minVCPUPerGPU;
+            private Integer minRAMPerGPU;
+            private Integer vcpuCount;
+            private Integer minDiskBandwidthMBps;
+            private Integer minDownloadMbps;
+            private Integer minUploadMbps;
         }
     }
 
     @Data
-    public static class VastAiConfig {
+    public static class VastAi {
         private String apiKey;
         private String baseUrl;
     }
