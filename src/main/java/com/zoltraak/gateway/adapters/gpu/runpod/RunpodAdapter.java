@@ -2,7 +2,6 @@ package com.zoltraak.gateway.adapters.gpu.runpod;
 
 import com.zoltraak.gateway.adapters.gpu.GpuProvider;
 import com.zoltraak.gateway.adapters.gpu.ProviderException;
-import com.zoltraak.gateway.adapters.gpu.runpod.model.RunpodCreatePodRequest;
 import com.zoltraak.gateway.adapters.gpu.runpod.model.RunpodPodResponse;
 import com.zoltraak.gateway.annotations.Adapter;
 import com.zoltraak.gateway.config.properties.OllamaProperties;
@@ -27,24 +26,21 @@ import java.util.function.Function;
 @Adapter
 public class RunpodAdapter implements GpuProvider {
 
-    private final String BASE_PATH = "/pods";
+    public static final String BASE_PATH = "/pods";
 
     private final WebClient webClient;
     private final OllamaProperties ollamaProperties;
     private final ProviderProperties providerProperties;
     private final AtomicReference<Mono<String>> podId;
-    private final RunpodAdapterMapper runpodAdapterMapper;
 
     public RunpodAdapter(
             @Qualifier("runpodWebClient") WebClient webClient,
             OllamaProperties ollamaProperties,
-            ProviderProperties providerProperties,
-            RunpodAdapterMapper runpodAdapterMapper) {
+            ProviderProperties providerProperties) {
         this.webClient = webClient;
         this.ollamaProperties = ollamaProperties;
         this.providerProperties = providerProperties;
         this.podId = new AtomicReference<>();
-        this.runpodAdapterMapper = runpodAdapterMapper;
     }
 
     @PostConstruct
@@ -131,9 +127,8 @@ public class RunpodAdapter implements GpuProvider {
                             if (ex.getHttpStatusCode() != 404) return Mono.error(ex);
 
                             log.warn("Runpod pod id not found, refreshing cache");
-                            Mono<String> cachedId = this.podId.get();
+                            Mono<String> cachedId = fetchPodId();
                             this.podId.set(cachedId);
-
                             return cachedId.flatMap(this::fetchPodById);
                         }));
     }
@@ -170,6 +165,16 @@ public class RunpodAdapter implements GpuProvider {
                 );
     }
 
+    private Mono<Void> rentNewPod() {
+        return createPod()
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+                .flatMap(id -> {
+                    Mono<String> cachedId = cachedId(id);
+                    podId.set(cachedId);
+                    return Mono.empty();
+                });
+    }
+
     private Mono<Void> deletePod(String podId) {
         return webClient.delete()
                 .uri("%s/{podId}".formatted(BASE_PATH), podId)
@@ -179,12 +184,10 @@ public class RunpodAdapter implements GpuProvider {
     }
 
     private Mono<String> createPod() {
-        RunpodCreatePodRequest body = runpodAdapterMapper.toRunpodCreateRequest(providerProperties.getRunpod().getCreate());
-
         // TODO consolidate with postAsMono
         return webClient.post()
                 .uri(BASE_PATH)
-                .bodyValue(body)
+                .bodyValue(providerProperties.getRunpod().getCreate())
                 .retrieve()
                 .onStatus(code -> code.is4xxClientError() || code.is5xxServerError(), handleErrorResponse())
                 .bodyToMono(RunpodPodResponse.class)
@@ -195,16 +198,6 @@ public class RunpodAdapter implements GpuProvider {
                             pod.costPerHr());
 
                     return Mono.just(pod.id());
-                });
-    }
-
-    private Mono<Void> rentNewPod() {
-        return createPod()
-                .retryWhen(Retry.backoff(3, Duration.ofSeconds(3)))
-                .flatMap(id -> {
-                    Mono<String> cachedId = cachedId(id);
-                    podId.set(cachedId);
-                    return Mono.empty();
                 });
     }
 
