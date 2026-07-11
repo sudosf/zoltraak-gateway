@@ -2,7 +2,7 @@
 # Zoltraak Pod Setup - Ollama + Vision Model
 
 echo "=== Installing system tools ==="
-apt update && apt install -y pciutils lshw curl zstd
+apt update && apt install -y pciutils lshw zstd
 echo "=== Checking GPU ==="
 nvidia-smi
 
