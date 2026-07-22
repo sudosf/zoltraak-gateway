@@ -7,10 +7,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping(OllamaProxyController.BASE_PATH)
+@RequestMapping({OllamaProxyController.NATIVE_BASE_PATH, OllamaProxyController.OPENAI_BASE_PATH})
 public class OllamaProxyController {
 
-    public static final String BASE_PATH = "/api";
+    public static final String NATIVE_BASE_PATH = "/api";
+    public static final String OPENAI_BASE_PATH = "/v1";
     public static final String CHAT = "/chat";
     public static final String CHAT_COMPLETIONS = "/chat/completions";
     public static final String GENERATE = "/generate";
