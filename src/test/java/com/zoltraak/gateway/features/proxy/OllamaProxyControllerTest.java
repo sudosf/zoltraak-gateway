@@ -35,7 +35,7 @@ class OllamaProxyControllerTest {
                 .thenReturn(Flux.just(responseBody));
 
         webTestClient.post()
-                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.CHAT)
+                .uri(OllamaProxyController.NATIVE_BASE_PATH + OllamaProxyController.CHAT)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .exchange()
@@ -54,7 +54,7 @@ class OllamaProxyControllerTest {
                 .thenReturn(Flux.just(responseBody));
 
         webTestClient.post()
-                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.GENERATE)
+                .uri(OllamaProxyController.NATIVE_BASE_PATH + OllamaProxyController.GENERATE)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .exchange()
@@ -72,7 +72,7 @@ class OllamaProxyControllerTest {
         when(ollamaProxyService.embed(any(), any(HttpHeaders.class))).thenReturn(Mono.just(responseBody));
 
         webTestClient.post()
-                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.EMBED)
+                .uri(OllamaProxyController.NATIVE_BASE_PATH + OllamaProxyController.EMBED)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .exchange()
@@ -89,7 +89,7 @@ class OllamaProxyControllerTest {
         when(ollamaProxyService.show(any(), any(HttpHeaders.class))).thenReturn(Mono.just(responseBody));
 
         webTestClient.post()
-                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.SHOW)
+                .uri(OllamaProxyController.NATIVE_BASE_PATH + OllamaProxyController.SHOW)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .exchange()
@@ -105,7 +105,7 @@ class OllamaProxyControllerTest {
         when(ollamaProxyService.getTags(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
         webTestClient.get()
-                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.TAGS)
+                .uri(OllamaProxyController.NATIVE_BASE_PATH + OllamaProxyController.TAGS)
                 .exchange()
                 .expectStatus().isOk();
 
@@ -119,7 +119,7 @@ class OllamaProxyControllerTest {
         when(ollamaProxyService.getVersion(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
         webTestClient.get()
-                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.VERSION)
+                .uri(OllamaProxyController.NATIVE_BASE_PATH + OllamaProxyController.VERSION)
                 .exchange()
                 .expectStatus().isOk();
 
@@ -133,7 +133,7 @@ class OllamaProxyControllerTest {
         when(ollamaProxyService.getPs(any(HttpHeaders.class))).thenReturn(Mono.just(response));
 
         webTestClient.get()
-                .uri(OllamaProxyController.BASE_PATH + OllamaProxyController.PS)
+                .uri(OllamaProxyController.NATIVE_BASE_PATH + OllamaProxyController.PS)
                 .exchange()
                 .expectStatus().isOk();
 

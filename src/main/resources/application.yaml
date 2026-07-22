@@ -11,7 +11,7 @@ server:
 zoltraak:
   provider:
     active: ${ACTIVE_PROVIDER:runpod}
-    response-timeout-seconds: 45
+    response-timeout-seconds: 60
     id-cache-hours: 1
     vastai:
       base-url: https://console.vast.ai
@@ -38,7 +38,6 @@ zoltraak:
     local:
       url: http://localhost
       port: 11434
-      timeout-seconds: 15
 
   gpu:
     idle-check-timeout-minutes: ${IDLE_CHECK_TIMEOUT_MINUTES:15}
