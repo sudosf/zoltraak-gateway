@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - n/a
   pull_request:
     branches:
-      - master
+      - n/a
 jobs:
   qodana:
     runs-on: ubuntu-latest
