@@ -19,6 +19,5 @@ public class OllamaProperties {
     public static class LocalConfig {
         private String url;
         private Integer port;
-        private Integer timeoutSeconds;
     }
 }
