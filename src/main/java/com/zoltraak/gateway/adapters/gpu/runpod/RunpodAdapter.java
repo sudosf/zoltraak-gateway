@@ -19,6 +19,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
@@ -32,6 +33,7 @@ public class RunpodAdapter implements GpuProvider {
     private final OllamaProperties ollamaProperties;
     private final ProviderProperties providerProperties;
     private final AtomicReference<Mono<String>> podId;
+    private final AtomicBoolean rentalInFlight;
 
     public RunpodAdapter(
             @Qualifier("runpodWebClient") WebClient webClient,
@@ -41,6 +43,7 @@ public class RunpodAdapter implements GpuProvider {
         this.ollamaProperties = ollamaProperties;
         this.providerProperties = providerProperties;
         this.podId = new AtomicReference<>();
+        this.rentalInFlight = new AtomicBoolean(false);
     }
 
     @PostConstruct
@@ -50,7 +53,6 @@ public class RunpodAdapter implements GpuProvider {
 
     @Override
     public Mono<Void> start() {
-
         return this.podId.get()
                 .flatMap(id -> {
                     log.info("Runpod starting pod with id = {}", id);
@@ -58,6 +60,12 @@ public class RunpodAdapter implements GpuProvider {
                     return postAsMono(path);
                 })
                 .onErrorResume(ProviderException.class, ex -> {
+                    boolean shouldRent = this.rentalInFlight.compareAndSet(false, true);
+                    if (!shouldRent) {
+                        log.warn("Runpod existing rental in flight, skipping...");
+                        return Mono.empty();
+                    }
+
                     if (ex.getHttpStatusCode() == 404) {
                         log.info("Runpod no active pod found, renting new pod...");
                         return rentNewPod();
@@ -76,7 +84,8 @@ public class RunpodAdapter implements GpuProvider {
                 .doOnSuccess(_ -> log.debug("Runpod start/create completed"))
                 .doOnError(e ->
                         log.debug("Runpod start/create failed, error = {}", ExceptionUtils.getRootCauseMessage(e))
-                );
+                )
+                .doFinally(_ -> this.rentalInFlight.set(false));
     }
 
     @Override

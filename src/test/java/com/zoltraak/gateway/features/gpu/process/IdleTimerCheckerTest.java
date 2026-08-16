@@ -11,11 +11,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatNoException;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,7 +42,7 @@ class IdleTimerCheckerTest {
 
             idleTimerChecker.check();
 
-            verify(gpuLifecycleManager, never()).requestShutdown();
+            verify(gpuLifecycleManager, never()).onIdleTimeout();
         }
 
         @Test
@@ -54,7 +52,7 @@ class IdleTimerCheckerTest {
 
             idleTimerChecker.check();
 
-            verify(gpuLifecycleManager, never()).requestShutdown();
+            verify(gpuLifecycleManager, never()).onIdleTimeout();
         }
     }
 
@@ -70,7 +68,7 @@ class IdleTimerCheckerTest {
         }
 
         @Test
-        void andBelowIdleThreshold_doesNotRequestShutdown() {
+        void andBelowIdleThreshold_doesNotCallOnIdleTimeout() {
             final int ELAPSED_MINUTES = 14;
 
             when(gpuLifecycleManager.getLastActivityAt())
@@ -78,41 +76,20 @@ class IdleTimerCheckerTest {
 
             idleTimerChecker.check();
 
-            verify(gpuLifecycleManager, never()).requestShutdown();
+            verify(gpuLifecycleManager, never()).onIdleTimeout();
         }
 
         @Test
-        void andIdleThresholdReached_requestsShutdown() {
-            when(gpuLifecycleManager.getLastActivityAt())
-                    .thenReturn(LocalDateTime.now().minusMinutes(idleTimeoutMinutes));
-            when(gpuLifecycleManager.requestShutdown()).thenReturn(Mono.empty());
-
-            idleTimerChecker.check();
-
-            verify(gpuLifecycleManager).requestShutdown();
-        }
-
-        @Test
-        void andExceedingIdleThreshold_requestsShutdown() {
+        void andExceedingIdleThreshold_callsOnIdleTimeout() {
             final int ELAPSED_MINUTES = 20;
 
             when(gpuLifecycleManager.getLastActivityAt())
                     .thenReturn(LocalDateTime.now().minusMinutes(ELAPSED_MINUTES));
-            when(gpuLifecycleManager.requestShutdown()).thenReturn(Mono.empty());
 
             idleTimerChecker.check();
 
-            verify(gpuLifecycleManager).requestShutdown();
+            verify(gpuLifecycleManager).onIdleTimeout();
         }
 
-        @Test
-        void andShutdownFails_doesNotPropagateError() {
-            when(gpuLifecycleManager.getLastActivityAt())
-                    .thenReturn(LocalDateTime.now().minusMinutes(idleTimeoutMinutes));
-            when(gpuLifecycleManager.requestShutdown())
-                    .thenReturn(Mono.error(new RuntimeException("shutdown failed")));
-
-            assertThatNoException().isThrownBy(() -> idleTimerChecker.check());
-        }
     }
 }

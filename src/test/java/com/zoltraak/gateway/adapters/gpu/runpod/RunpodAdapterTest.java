@@ -11,10 +11,13 @@ import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.Exceptions;
+import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.mock;
@@ -209,6 +212,33 @@ class RunpodAdapterTest {
 
                 assertThat(startRequest.getPath()).isEqualTo("%s/%s/start".formatted(RunpodAdapter.BASE_PATH, POD_ID));
                 assertThat(createRequest.getPath()).isEqualTo(RunpodAdapter.BASE_PATH);
+            }
+
+            @Test
+            void rentsExactlyOnePod_onConcurrentCalls() throws InterruptedException {
+                final int EXPECTED_TOTAL_REQUESTS = 4;
+                mockWebServer.enqueue(new MockResponse().setResponseCode(404));
+                mockWebServer.enqueue(new MockResponse().setResponseCode(404));
+                enqueuePodResponse("RUNNING");
+                enqueuePodResponse("RUNNING");
+
+                StepVerifier.create(Flux.merge(adapter.start(), adapter.start()))
+                        .verifyComplete();
+
+                List<RecordedRequest> requests = new ArrayList<>();
+                while (mockWebServer.getRequestCount() > requests.size()) {
+                    requests.add(mockWebServer.takeRequest());
+                }
+
+                long podCount = requests.stream()
+                        .filter(req -> "POST".equals(req.getMethod())
+                                && req.getPath() != null
+                                && req.getPath().equals(RunpodAdapter.BASE_PATH))
+                        .count();
+
+                assertThat(podCount).isEqualTo(1);
+                assertThat(mockWebServer.getRequestCount())
+                        .isEqualTo(EXPECTED_TOTAL_REQUESTS);
             }
 
             @Test
