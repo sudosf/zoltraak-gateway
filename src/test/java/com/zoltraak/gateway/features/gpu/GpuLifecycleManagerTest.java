@@ -114,6 +114,19 @@ class GpuLifecycleManagerTest {
             verify(requestQueue).onPodDegraded();
         }
 
+        @Test
+        void onIdleTimeout_requestsShutdown_andResetsSessionStartedAt() {
+            when(gpuProvider.start()).thenReturn(Mono.empty());
+            StepVerifier.create(gpuLifecycleManager.requestStart()).verifyComplete();
+
+            when(requestQueue.isEmpty()).thenReturn(true);
+            when(gpuProvider.stop()).thenReturn(Mono.empty());
+            gpuLifecycleManager.onIdleTimeout();
+
+            assertThat(gpuLifecycleManager.getStatus()).isEqualTo(PodStatus.STOPPED);
+            assertThat(gpuLifecycleManager.getSessionStartedAt()).isNull();
+        }
+
         @Nested
         class ExternalStateDrift {
 

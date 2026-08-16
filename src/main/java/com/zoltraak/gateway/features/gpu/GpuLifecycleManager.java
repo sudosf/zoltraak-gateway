@@ -87,7 +87,7 @@ public class GpuLifecycleManager {
         return gpuProvider.stop()
                 .doOnSuccess(_ -> {
                     podState.setStatus(PodStatus.STOPPED);
-                    log.info("GPU pod stopped, status = {}", PodStatus.STOPPED);
+                    log.info("GPU pod shutdown complete, status = {}", PodStatus.STOPPED);
                 })
                 .doOnError(ex -> {
                     log.warn("GPU pod shutdown failed, rolling back status = {}, message = {}",
@@ -112,6 +112,15 @@ public class GpuLifecycleManager {
     public void onPodDegraded() {
         podState.setStatus(PodStatus.DEGRADED);
         requestQueue.onPodDegraded();
+    }
+
+    public void onIdleTimeout() {
+        requestShutdown().subscribe(
+                null,
+                error -> log.error("GPU pod failed to shutdown GPU pod, message = {}",
+                        ExceptionUtils.getRootCauseMessage(error)),
+                () -> podState.setSessionStartedAt(null)
+        );
     }
 
     public void onExternalStateDrift(PodStatus externalStatus) {
